@@ -484,9 +484,9 @@ section{ position:relative; padding: 2rem 0; width: 100%; }
 /* ---------- MEMORY MATCH GAME ---------- */
 .memory-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(var(--grid-cols, 4), 1fr);
   gap: 10px;
-  max-width: 320px;
+  max-width: min(100%, calc(var(--grid-cols, 4) * 80px));
   margin: 1.8rem auto;
   z-index: 2;
   position: relative;
@@ -581,10 +581,17 @@ section{ position:relative; padding: 2rem 0; width: 100%; }
 .polaroid-img{
   background: repeating-linear-gradient(135deg, #D4C9B6, #D4C9B6 10px, #C6BAA5 10px, #C6BAA5 20px);
   height: 190px; border-radius: 2px; display:flex; align-items:center; justify-content:center;
-  color: rgba(43,26,26,0.45); font-family: var(--sans); font-size: 0.7rem; text-align:center; padding: 0.5rem;
+  color: rgba(43,26,26,0.45); font-family: var(--sans); font-size: 0.7rem; text-align:center;
   box-shadow: inset 0 0 15px rgba(0,0,0,0.1);
   z-index: 2;
   position: relative;
+  overflow: hidden;
+}
+.polaroid-img img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 .polaroid-cap{ font-family: var(--hand); color: var(--ink); text-align:center; padding-top: 0.8rem; font-size: 1.3rem; z-index: 2; position: relative; }
 

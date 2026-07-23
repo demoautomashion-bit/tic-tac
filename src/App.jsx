@@ -85,7 +85,7 @@ const DEFAULT_FLOW = [
     type: 'memory', 
     eyebrow: 'chapter five', 
     title: 'Memory Match', 
-    instruction: 'Match all 8 pairs of cards to unlock the final confession.', 
+    instruction: 'Match all pairs of cards to unlock the next stage.', 
     symbols: ['❤️', '🌸', '🎁', '✈️', '🍿', '🧸', '🍕', '☕'] 
   },
   { 
@@ -104,12 +104,12 @@ const DEFAULT_FLOW = [
       "Just... you. All of it. Even the mornings."
     ], 
     polaroids: [
-      { cap: "that one weekend", rot: -2 },
-      { cap: "the road trip", rot: 3 },
-      { cap: "your birthday", rot: -4 },
-      { cap: "just because", rot: 1 },
-      { cap: "the rainy day", rot: -3 },
-      { cap: "the good year", rot: 4 }
+      { url: '', cap: "that one weekend", rot: -2 },
+      { url: '', cap: "the road trip", rot: 3 },
+      { url: '', cap: "your birthday", rot: -4 },
+      { url: '', cap: "just because", rot: 1 },
+      { url: '', cap: "the rainy day", rot: -3 },
+      { url: '', cap: "the good year", rot: 4 }
     ], 
     closingLetter: "So here's the truth: every version of my future has you in it.", 
     closingSig: "— always, Your Name", 
@@ -658,6 +658,13 @@ export default function App() {
     }
   };
 
+  // Memory Grid columns calculator
+  const totalCards = memoryCards.length;
+  let memoryCols = 4;
+  if (totalCards <= 4) memoryCols = 2;
+  else if (totalCards <= 12 && totalCards % 3 === 0) memoryCols = 3;
+  else memoryCols = 4;
+
   // ---------- FINAL CONFETTI ----------
   const handleConfetti = () => {
     confetti({
@@ -750,7 +757,7 @@ export default function App() {
       newStep.eyebrow = 'new chapter';
       newStep.title = 'Our Final Chapter';
       newStep.reasons = ['Reason number one...'];
-      newStep.polaroids = [{ cap: "Caption", rot: 0 }];
+      newStep.polaroids = [{ url: '', cap: "Caption", rot: 0 }];
       newStep.closingLetter = "The final love note text...";
       newStep.closingSig = "— always, Your Name";
       newStep.recipientName = "Her Name";
@@ -890,8 +897,34 @@ export default function App() {
                                   handleUpdateStepProperty(idx, 'options', nextOpts);
                                 }}
                               />
+                              <button 
+                                className="game-ctrl-btn" 
+                                disabled={(step.options || []).length <= 2}
+                                onClick={() => {
+                                  const nextOpts = step.options.filter((_, o) => o !== oIdx);
+                                  let nextCorrect = step.correctIndex;
+                                  if (nextCorrect >= nextOpts.length) {
+                                    nextCorrect = nextOpts.length - 1;
+                                  }
+                                  const nextStep = { ...step, options: nextOpts, correctIndex: nextCorrect };
+                                  const newFlow = [...flowConfig];
+                                  newFlow[idx] = nextStep;
+                                  handleSaveToLocalStorage(newFlow);
+                                }}
+                              >
+                                ×
+                              </button>
                             </div>
                           ))}
+                          <button 
+                            className="editor-btn-secondary"
+                            onClick={() => {
+                              const nextOpts = [...(step.options || []), `Option ${(step.options || []).length + 1}`];
+                              handleUpdateStepProperty(idx, 'options', nextOpts);
+                            }}
+                          >
+                            + Add Option
+                          </button>
                         </div>
                         <div className="custom-input-group">
                           <label>Success Text</label>
@@ -1005,15 +1038,39 @@ export default function App() {
                           />
                         </div>
                         <div className="custom-input-group">
-                          <label>Emojis/Cards (separated by commas, total 8 required)</label>
-                          <input 
-                            type="text" 
-                            value={(step.symbols || []).join(', ')} 
-                            onChange={(e) => {
-                              const nextSyms = e.target.value.split(',').map(s => s.trim()).filter(Boolean);
+                          <label>Memory Pairs (Text or Emojis)</label>
+                          {(step.symbols || []).map((sym, sIdx) => (
+                            <div key={sIdx} className="option-edit-row">
+                              <input 
+                                type="text" 
+                                value={sym} 
+                                onChange={(e) => {
+                                  const nextSyms = [...step.symbols];
+                                  nextSyms[sIdx] = e.target.value;
+                                  handleUpdateStepProperty(idx, 'symbols', nextSyms);
+                                }}
+                              />
+                              <button 
+                                className="game-ctrl-btn" 
+                                disabled={(step.symbols || []).length <= 2}
+                                onClick={() => {
+                                  const nextSyms = step.symbols.filter((_, s) => s !== sIdx);
+                                  handleUpdateStepProperty(idx, 'symbols', nextSyms);
+                                }}
+                              >
+                                ×
+                              </button>
+                            </div>
+                          ))}
+                          <button 
+                            className="editor-btn-secondary"
+                            onClick={() => {
+                              const nextSyms = [...(step.symbols || []), '❓'];
                               handleUpdateStepProperty(idx, 'symbols', nextSyms);
-                            }} 
-                          />
+                            }}
+                          >
+                            + Add Card Pair
+                          </button>
                         </div>
                       </>
                     )}
@@ -1056,22 +1113,52 @@ export default function App() {
                           />
                         </div>
                         <div className="custom-input-group">
-                          <label>Polaroid captions (one per line)</label>
-                          <textarea 
-                            rows="4"
-                            value={(step.polaroids || []).map(p => p.cap).join('\n')} 
-                            onChange={(e) => {
-                              const lines = e.target.value.split('\n').filter(Boolean);
-                              const nextPols = lines.map((line, lIdx) => {
-                                const oldPol = (step.polaroids || [])[lIdx] || {};
-                                return {
-                                  cap: line,
-                                  rot: oldPol.rot !== undefined ? oldPol.rot : (Math.random() * 8 - 4)
-                                };
-                              });
+                          <label>Snapshots (Polaroids)</label>
+                          {(step.polaroids || []).map((pol, pIdx) => (
+                            <div key={pIdx} style={{ border: '1px solid rgba(255,255,255,0.1)', padding: '0.5rem', borderRadius: '4px', marginBottom: '0.5rem' }}>
+                              <input 
+                                type="text" 
+                                placeholder="Image URL (http...)"
+                                value={pol.url || ''} 
+                                style={{ marginBottom: '0.25rem' }}
+                                onChange={(e) => {
+                                  const nextPols = [...step.polaroids];
+                                  nextPols[pIdx] = { ...nextPols[pIdx], url: e.target.value };
+                                  handleUpdateStepProperty(idx, 'polaroids', nextPols);
+                                }}
+                              />
+                              <input 
+                                type="text" 
+                                placeholder="Caption"
+                                value={pol.cap || ''}
+                                style={{ marginBottom: '0.25rem' }}
+                                onChange={(e) => {
+                                  const nextPols = [...step.polaroids];
+                                  nextPols[pIdx] = { ...nextPols[pIdx], cap: e.target.value };
+                                  handleUpdateStepProperty(idx, 'polaroids', nextPols);
+                                }}
+                              />
+                              <button 
+                                className="game-ctrl-btn" 
+                                style={{ marginTop: '0.25rem', width: 'auto', padding: '0 0.5rem' }}
+                                onClick={() => {
+                                  const nextPols = step.polaroids.filter((_, p) => p !== pIdx);
+                                  handleUpdateStepProperty(idx, 'polaroids', nextPols);
+                                }}
+                              >
+                                Delete Polaroid
+                              </button>
+                            </div>
+                          ))}
+                          <button 
+                            className="editor-btn-secondary"
+                            onClick={() => {
+                              const nextPols = [...(step.polaroids || []), { url: '', cap: 'New memory', rot: Math.random() * 8 - 4 }];
                               handleUpdateStepProperty(idx, 'polaroids', nextPols);
-                            }} 
-                          />
+                            }}
+                          >
+                            + Add Polaroid
+                          </button>
                         </div>
                         <div className="custom-input-group">
                           <label>Footer Year</label>
@@ -1308,7 +1395,7 @@ export default function App() {
               <h3>{currentStep.title}</h3>
               <p style={{ marginBottom: '1.5rem' }}>{currentStep.instruction}</p>
 
-              <div className="memory-grid">
+              <div className="memory-grid" style={{ '--grid-cols': memoryCols }}>
                 {memoryCards.map((card, idx) => {
                   const isFlipped = card.isFlipped || card.isMatched;
                   return (
@@ -1397,7 +1484,13 @@ export default function App() {
                         style={{ transform: `rotate(${p.rot}deg)` }}
                       >
                         <div className="paper-vintage-bg"></div>
-                        <div className="polaroid-img">[ your photo here ]</div>
+                        <div className="polaroid-img">
+                          {p.url ? (
+                            <img src={p.url} alt={p.cap} />
+                          ) : (
+                            <span>[ your photo here ]</span>
+                          )}
+                        </div>
                         <div className="polaroid-cap">{p.cap}</div>
                       </div>
                     ))}
