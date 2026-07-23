@@ -3,15 +3,23 @@ import confetti from 'canvas-confetti';
 
 export default function App() {
   const [veilHidden, setVeilHidden] = useState(false);
-  const [stage, setStage] = useState('envelope'); // 'envelope', 'timeline', 'quiz', 'tictactoe', 'reasons', 'confession'
+  const [stage, setStage] = useState('envelope'); // 'envelope', 'quiz1', 'timeline', 'quiz2', 'tictactoe', 'memory', 'confession'
   
-  // Envelope opening state (transition helper)
-  const [envOpened, setEnvOpened] = useState(false);
+  // Envelope opening state classes ('', 'open-step1', 'open-step1 open-step2', 'open-step1 open-step2 open-step3')
+  const [envOpenClass, setEnvOpenClass] = useState('');
 
-  // Quiz States
-  const [selectedQuizOpt, setSelectedQuizOpt] = useState(null);
-  const [quizStatus, setQuizStatus] = useState('idle'); // 'idle', 'correct', 'incorrect'
-  const [shakeQuizCard, setShakeQuizCard] = useState(false);
+  // Quiz 1 States
+  const [selectedQuiz1Opt, setSelectedQuiz1Opt] = useState(null);
+  const [quiz1Status, setQuiz1Status] = useState('idle'); // 'idle', 'correct', 'incorrect'
+  const [shakeQuiz1Card, setShakeQuiz1Card] = useState(false);
+
+  // Timeline Read Milestones checklist
+  const [readMilestones, setReadMilestones] = useState({ 0: false, 1: false, 2: false, 3: false });
+
+  // Quiz 2 States
+  const [selectedQuiz2Opt, setSelectedQuiz2Opt] = useState(null);
+  const [quiz2Status, setQuiz2Status] = useState('idle'); // 'idle', 'correct', 'incorrect'
+  const [shakeQuiz2Card, setShakeQuiz2Card] = useState(false);
 
   // Tic-Tac-Toe States
   const [board, setBoard] = useState(Array(9).fill(null));
@@ -19,16 +27,20 @@ export default function App() {
   const [aiSymbol] = useState('⭕');
   const [isPlayerTurn, setIsPlayerTurn] = useState(true);
   const [gameWinner, setGameWinner] = useState(null); // '❤️', '⭕', 'Draw', null
-  const [gameStatus, setGameStatus] = useState('Your turn! Tap a cell to place your heart.');
+  const [gameStatus, setGameStatus] = useState('Your turn! Place a heart on the grid.');
 
-  // Reasons / Gallery Flipped State
-  const [flippedCards, setFlippedCards] = useState({});
+  // Memory Match States
+  const [memoryCards, setMemoryCards] = useState([]);
+  const [selectedMemoryIndices, setSelectedMemoryIndices] = useState([]);
+  const [matchedPairsCount, setMatchedPairsCount] = useState(0);
+
+  // Final Signature Confetti
   const [sigText, setSigText] = useState('one more thing');
 
   const canvasRef = useRef(null);
 
-  // Quiz Configurations
-  const quizData = {
+  // Quiz 1 Data
+  const quiz1Data = {
     question: "Where did we first cross paths?",
     options: [
       "The cozy local coffee shop",
@@ -36,10 +48,22 @@ export default function App() {
       "Waiting at that rainy bus stop",
       "A mutual friend's birthday gathering"
     ],
-    correctIndex: 2 // Option index 2 is correct
+    correctIndex: 2
   };
 
-  // 1. Veil preloader fadeout
+  // Quiz 2 Data
+  const quiz2Data = {
+    question: "What is my absolute favorite way to spend a lazy Sunday with you?",
+    options: [
+      "Going on an intensive hiking trail",
+      "Sleeping in late and ordering takeout pancakes",
+      "Spending the whole day doing household chores",
+      "Running bulk errands at the supermarket"
+    ],
+    correctIndex: 1
+  };
+
+  // 1. Veil fadeout on load
   useEffect(() => {
     const timer = setTimeout(() => setVeilHidden(true), 500);
     return () => clearTimeout(timer);
@@ -135,7 +159,7 @@ export default function App() {
     };
   }, []);
 
-  // 3. Cursor Heart Trail (respects reduced motion & fine pointer only)
+  // 3. Cursor Heart Trail (fine pointers only, respects reduced motion)
   useEffect(() => {
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const finePointer = window.matchMedia('(pointer: fine)').matches;
@@ -179,7 +203,7 @@ export default function App() {
     return () => revealEls.forEach(el => io.unobserve(el));
   }, [stage]);
 
-  // 5. Timeline Line Growth & Item Observability
+  // 5. Timeline Line & Item Reveal
   useEffect(() => {
     if (stage !== 'timeline') return;
     const timelineLine = document.getElementById('timelineLine');
@@ -208,9 +232,9 @@ export default function App() {
     };
   }, [stage]);
 
-  // 6. Reasons Grid 3D Card Hover-Tilt Effect
+  // 6. Reasons 3D Hover-Tilt Effect
   useEffect(() => {
-    if (stage !== 'reasons') return;
+    if (stage !== 'confession') return;
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     if (reduceMotion) return;
 
@@ -247,43 +271,90 @@ export default function App() {
     };
   }, [stage, flippedCards]);
 
-  // ---------- ENVELOPE OPENING ----------
+  // ---------- ENVELOPE MULTI-PHASE TRANSITION ----------
   const handleOpenEnvelope = () => {
-    setEnvOpened(true);
+    if (envOpenClass !== '') return;
+
+    // Step 1: Flap Opens
+    setEnvOpenClass('open-step1');
+
+    // Step 2: Letter slides out of pocket
     setTimeout(() => {
-      setStage('timeline');
-    }, 1400); // Wait for open slide animation to complete
+      setEnvOpenClass('open-step1 open-step2');
+    }, 900);
+
+    // Step 3: Letter scales/flies toward full screen
+    setTimeout(() => {
+      setEnvOpenClass('open-step1 open-step2 open-step3');
+    }, 2000);
+
+    // Step 4: Transition completely into Stage 1
+    setTimeout(() => {
+      setStage('quiz1');
+    }, 2900);
   };
 
-  // ---------- QUIZ EVENT HANDLERS ----------
-  const handleQuizSelection = (index) => {
-    if (quizStatus === 'correct') return;
-    setSelectedQuizOpt(index);
+  // ---------- QUIZ 1 EVENT HANDLERS ----------
+  const handleQuiz1Selection = (index) => {
+    if (quiz1Status === 'correct') return;
+    setSelectedQuiz1Opt(index);
 
-    if (index === quizData.correctIndex) {
-      setQuizStatus('correct');
-      // Spark confetti for correct answer
+    if (index === quiz1Data.correctIndex) {
+      setQuiz1Status('correct');
       confetti({
         particleCount: 45,
         spread: 50,
         origin: { y: 0.8 }
       });
     } else {
-      setQuizStatus('incorrect');
-      setShakeQuizCard(true);
+      setQuiz1Status('incorrect');
+      setShakeQuiz1Card(true);
       setTimeout(() => {
-        setShakeQuizCard(false);
-        setSelectedQuizOpt(null);
-        setQuizStatus('idle');
+        setShakeQuiz1Card(false);
+        setSelectedQuiz1Opt(null);
+        setQuiz1Status('idle');
       }, 500);
     }
   };
 
-  // ---------- TIC-TAC-TOE AI LOGIC & WIN CONDITIONS ----------
+  // ---------- TIMELINE CHECKLIST HANDLERS ----------
+  const toggleMilestoneRead = (idx) => {
+    setReadMilestones(prev => ({
+      ...prev,
+      [idx]: true
+    }));
+  };
+
+  const allMilestonesRead = Object.values(readMilestones).every(status => status === true);
+
+  // ---------- QUIZ 2 EVENT HANDLERS ----------
+  const handleQuiz2Selection = (index) => {
+    if (quiz2Status === 'correct') return;
+    setSelectedQuiz2Opt(index);
+
+    if (index === quiz2Data.correctIndex) {
+      setQuiz2Status('correct');
+      confetti({
+        particleCount: 45,
+        spread: 50,
+        origin: { y: 0.8 }
+      });
+    } else {
+      setQuiz2Status('incorrect');
+      setShakeQuiz2Card(true);
+      setTimeout(() => {
+        setShakeQuiz2Card(false);
+        setSelectedQuiz2Opt(null);
+        setQuiz2Status('idle');
+      }, 500);
+    }
+  };
+
+  // ---------- TIC-TAC-TOE GAME LOGIC ----------
   const winCombos = [
-    [0, 1, 2], [3, 4, 5], [6, 7, 8], // Rows
-    [0, 3, 6], [1, 4, 7], [2, 5, 8], // Cols
-    [0, 4, 8], [2, 4, 6]             // Diagonals
+    [0, 1, 2], [3, 4, 5], [6, 7, 8],
+    [0, 3, 6], [1, 4, 7], [2, 5, 8],
+    [0, 4, 8], [2, 4, 6]
   ];
 
   const checkWinner = (tempBoard) => {
@@ -313,7 +384,7 @@ export default function App() {
     }
   };
 
-  // AI Opponent Move
+  // AI Opponent Strategy
   useEffect(() => {
     if (isPlayerTurn || gameWinner || stage !== 'tictactoe') return;
 
@@ -323,7 +394,7 @@ export default function App() {
 
       let aiMove = null;
 
-      // 1. Try to win in next move
+      // Try to win in next move
       for (let cell of emptyCells) {
         const boardCopy = [...board];
         boardCopy[cell] = aiSymbol;
@@ -333,7 +404,7 @@ export default function App() {
         }
       }
 
-      // 2. Block player from winning in next move
+      // Block player from winning
       if (aiMove === null) {
         for (let cell of emptyCells) {
           const boardCopy = [...board];
@@ -345,7 +416,7 @@ export default function App() {
         }
       }
 
-      // 3. Fallback to random move
+      // Choose random
       if (aiMove === null) {
         const randomIndex = Math.floor(Math.random() * emptyCells.length);
         aiMove = emptyCells[randomIndex];
@@ -370,11 +441,11 @@ export default function App() {
   const handleGameOver = (winner) => {
     setGameWinner(winner);
     if (winner === playerSymbol) {
-      setGameStatus("You win! ❤️ You've unlocked the reasons.");
+      setGameStatus("You win! ❤️ You've unlocked the next puzzle.");
       confetti({
         particleCount: 50,
         spread: 60,
-        colors: ['#D4A59A', '#E6C594']
+        colors: ['#E68FA3', '#ECC695']
       });
     } else if (winner === aiSymbol) {
       setGameStatus("Looks like I won this round! Let's try again.");
@@ -390,6 +461,81 @@ export default function App() {
     setGameStatus("Your turn! Place your heart.");
   };
 
+  // ---------- MEMORY MATCH GAME LOGIC ----------
+  const symbols = ['❤️', '🌸', '🎁', '✈️', '🍿', '🧸', '🍕', '☕'];
+
+  const initMemoryGame = () => {
+    // Duplicate symbols to create 8 matching pairs
+    const doubleSymbols = [...symbols, ...symbols];
+    
+    // Shuffle symbols
+    const shuffled = doubleSymbols
+      .map((sym, idx) => ({ id: idx, symbol: sym, isFlipped: false, isMatched: false }))
+      .sort(() => Math.random() - 0.5);
+
+    setMemoryCards(shuffled);
+    setSelectedMemoryIndices([]);
+    setMatchedPairsCount(0);
+  };
+
+  // Initialize Memory game when entering state
+  useEffect(() => {
+    if (stage === 'memory') {
+      initMemoryGame();
+    }
+  }, [stage]);
+
+  const handleMemoryCardClick = (idx) => {
+    if (
+      memoryCards[idx].isFlipped || 
+      memoryCards[idx].isMatched || 
+      selectedMemoryIndices.length >= 2
+    ) return;
+
+    // Flip current card
+    const updatedCards = [...memoryCards];
+    updatedCards[idx].isFlipped = true;
+    setMemoryCards(updatedCards);
+
+    const newSelections = [...selectedMemoryIndices, idx];
+    setSelectedMemoryIndices(newSelections);
+
+    if (newSelections.length === 2) {
+      const [firstIdx, secondIdx] = newSelections;
+      if (memoryCards[firstIdx].symbol === memoryCards[secondIdx].symbol) {
+        // MATCH FOUND
+        setTimeout(() => {
+          const matchedCards = [...memoryCards];
+          matchedCards[firstIdx].isMatched = true;
+          matchedCards[secondIdx].isMatched = true;
+          setMemoryCards(matchedCards);
+          setSelectedMemoryIndices([]);
+          setMatchedPairsCount(prev => {
+            const nextCount = prev + 1;
+            if (nextCount === symbols.length) {
+              // ALL MATCHED
+              confetti({
+                particleCount: 65,
+                spread: 70,
+                colors: ['#E68FA3', '#ECC695']
+              });
+            }
+            return nextCount;
+          });
+        }, 400);
+      } else {
+        // MISMATCH
+        setTimeout(() => {
+          const resetCards = [...memoryCards];
+          resetCards[firstIdx].isFlipped = false;
+          resetCards[secondIdx].isFlipped = false;
+          setMemoryCards(resetCards);
+          setSelectedMemoryIndices([]);
+        }, 1000);
+      }
+    }
+  };
+
   // ---------- FINAL CONFETTI ----------
   const handleConfetti = () => {
     confetti({
@@ -397,7 +543,7 @@ export default function App() {
       spread: 80,
       startVelocity: 34,
       origin: { y: 0.65 },
-      colors: ['#D4A59A', '#E6C594', '#8A2D3C']
+      colors: ['#E68FA3', '#ECC695', '#7A0923']
     });
     setSigText('I mean it.');
   };
@@ -432,6 +578,8 @@ export default function App() {
     { cap: "the good year", rot: 4 }
   ];
 
+  const totalTimelineRead = Object.values(readMilestones).filter(Boolean).length;
+
   return (
     <>
       {/* 1. Fireflies Canvas Background */}
@@ -449,7 +597,7 @@ export default function App() {
         {stage === 'envelope' && (
           <div className="stage-panel" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
             <div className="envelope-wrap">
-              <div className={`envelope-scene ${envOpened ? 'open' : ''}`} id="envScene">
+              <div className={`envelope-scene ${envOpenClass}`} id="envScene">
                 <div className="env-shadow"></div>
                 <button className="envelope" onClick={handleOpenEnvelope} id="envBtn" aria-label="Open the letter">
                   <div className="env-body">
@@ -468,22 +616,65 @@ export default function App() {
                   <div className="env-label">For [Her Name]</div>
                 </button>
               </div>
-              <span className={`tap-prompt ${envOpened ? 'gone' : ''}`} id="tapPrompt">tap to open</span>
+              <span className={`tap-prompt ${envOpenClass !== '' ? 'gone' : ''}`} id="tapPrompt">tap to open</span>
             </div>
           </div>
         )}
 
-        {/* STAGE 1: TIMELINE */}
+        {/* STAGE 1: TRIVIA QUIZ 1 */}
+        {stage === 'quiz1' && (
+          <div className={`stage-panel ${shakeQuiz1Card ? 'shake' : ''}`}>
+            <div className="quiz-card paper-vintage">
+              <div className="paper-vintage-bg"></div>
+              <span className="eyebrow" style={{ color: '#7A0923' }}>chapter one</span>
+              <h3>First Milestone</h3>
+              <p className="question">{quiz1Data.question}</p>
+
+              <div className="quiz-options">
+                {quiz1Data.options.map((option, idx) => {
+                  let optClass = '';
+                  if (selectedQuiz1Opt === idx) {
+                    optClass = quiz1Status === 'correct' ? 'correct' : 'incorrect';
+                  }
+                  return (
+                    <button 
+                      key={idx}
+                      className={`quiz-option ${optClass}`}
+                      disabled={quiz1Status === 'correct'}
+                      onClick={() => handleQuiz1Selection(idx)}
+                    >
+                      {option}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {quiz1Status === 'correct' && (
+                <div style={{ marginTop: '2.5rem', animation: 'pageFlipIn 0.5s ease forwards' }}>
+                  <p style={{ fontFamily: 'var(--serif)', fontStyle: 'italic', marginBottom: '1.5rem', color: '#1b5e20' }}>
+                    Correct! You remember. Now, let's explore our story...
+                  </p>
+                  <button className="vintage-btn" onClick={() => setStage('timeline')}>
+                    Open Story
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* STAGE 2: TIMELINE */}
         {stage === 'timeline' && (
           <div className="stage-panel">
-            {/* Opening greeting */}
-            <section style={{ marginBottom: '4rem' }}>
+            {/* Greeting */}
+            <section style={{ marginBottom: '3rem' }}>
               <div className="section-inner">
                 <div className="letter-card paper-vintage">
                   <div className="paper-vintage-bg"></div>
                   <p>I've been trying to find the right way to tell you this, so I built you something instead.</p>
                   <p>This isn't a card you'll lose in a drawer, or a text that gets buried under everything else. It's just... us, written down. The parts I don't say enough out loud.</p>
-                  <p>So take your time. This journey is just for you.</p>
+                  <p>So take your time. Read through each milestone carefully.</p>
                   <div className="signoff">— [Your Name]</div>
                 </div>
               </div>
@@ -492,7 +683,7 @@ export default function App() {
             {/* Timeline */}
             <section>
               <div className="section-inner">
-                <span className="eyebrow">chapter one</span>
+                <span className="eyebrow">chapter two</span>
                 <div className="heart-divider">
                   <svg viewBox="0 0 32 29"><path d="M23.6 0c-3 0-5.7 1.7-7.6 4.4C14.1 1.7 11.4 0 8.4 0 3.8 0 0 3.9 0 8.8c0 8.4 8.6 13 15.4 19.6.3.3.9.3 1.2 0C23.4 21.8 32 17.2 32 8.8 32 3.9 28.2 0 23.6 0z"/></svg>
                 </div>
@@ -502,20 +693,37 @@ export default function App() {
 
                   {timelineData.map((item, idx) => (
                     <div className="t-item" key={idx}>
-                      <div className="t-card paper-vintage">
+                      <div className="t-card paper-vintage" onClick={() => toggleMilestoneRead(idx)}>
                         <div className="paper-vintage-bg"></div>
                         <div className="t-dot"></div>
                         <span className="t-date">{item.date}</span>
                         <h3 className="t-title">{item.title}</h3>
                         <p>{item.body}</p>
+                        
+                        <div className={`read-indicator ${readMilestones[idx] ? 'read' : ''}`}>
+                          {readMilestones[idx] ? (
+                            <>
+                              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                              Read
+                            </>
+                          ) : (
+                            'Tap to read'
+                          )}
+                        </div>
                       </div>
                     </div>
                   ))}
                 </div>
 
                 <div style={{ textAlign: 'center', marginTop: '4rem' }}>
-                  <button className="vintage-btn" onClick={() => setStage('quiz')}>
-                    Continue to Trivia
+                  <p style={{ fontFamily: 'var(--serif)', fontStyle: 'italic', marginBottom: '1.2rem', opacity: 0.85 }}>
+                    {allMilestonesRead 
+                      ? "Milestones read! Ready for the next quiz." 
+                      : `Read all 4 memories to unlock the next stage. (${totalTimelineRead}/4 read)`
+                    }
+                  </p>
+                  <button className="vintage-btn" disabled={!allMilestonesRead} onClick={() => setStage('quiz2')}>
+                    Next Quiz
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
                   </button>
                 </div>
@@ -524,27 +732,27 @@ export default function App() {
           </div>
         )}
 
-        {/* STAGE 2: TRIVIA QUIZ */}
-        {stage === 'quiz' && (
-          <div className={`stage-panel ${shakeQuizCard ? 'shake' : ''}`}>
+        {/* STAGE 3: TRIVIA QUIZ 2 */}
+        {stage === 'quiz2' && (
+          <div className={`stage-panel ${shakeQuiz2Card ? 'shake' : ''}`}>
             <div className="quiz-card paper-vintage">
               <div className="paper-vintage-bg"></div>
-              <span className="eyebrow" style={{ color: '#8A2D3C' }}>chapter two</span>
-              <h3>Memory Check</h3>
-              <p className="question">{quizData.question}</p>
+              <span className="eyebrow" style={{ color: '#7A0923' }}>chapter three</span>
+              <h3>Secret Quirks</h3>
+              <p className="question">{quiz2Data.question}</p>
 
               <div className="quiz-options">
-                {quizData.options.map((option, idx) => {
+                {quiz2Data.options.map((option, idx) => {
                   let optClass = '';
-                  if (selectedQuizOpt === idx) {
-                    optClass = quizStatus === 'correct' ? 'correct' : 'incorrect';
+                  if (selectedQuiz2Opt === idx) {
+                    optClass = quiz2Status === 'correct' ? 'correct' : 'incorrect';
                   }
                   return (
                     <button 
                       key={idx}
                       className={`quiz-option ${optClass}`}
-                      disabled={quizStatus === 'correct'}
-                      onClick={() => handleQuizSelection(idx)}
+                      disabled={quiz2Status === 'correct'}
+                      onClick={() => handleQuiz2Selection(idx)}
                     >
                       {option}
                     </button>
@@ -552,10 +760,10 @@ export default function App() {
                 })}
               </div>
 
-              {quizStatus === 'correct' && (
+              {quiz2Status === 'correct' && (
                 <div style={{ marginTop: '2.5rem', animation: 'pageFlipIn 0.5s ease forwards' }}>
                   <p style={{ fontFamily: 'var(--serif)', fontStyle: 'italic', marginBottom: '1.5rem', color: '#1b5e20' }}>
-                    Correct! You remember. Now, let's play a game...
+                    Absolutely correct! Now let's play a game of hearts.
                   </p>
                   <button className="vintage-btn" onClick={() => setStage('tictactoe')}>
                     Play Tic-Tac-Toe
@@ -567,14 +775,14 @@ export default function App() {
           </div>
         )}
 
-        {/* STAGE 3: TIC-TAC-TOE */}
+        {/* STAGE 4: TIC-TAC-TOE */}
         {stage === 'tictactoe' && (
           <div className="stage-panel">
             <div className="game-card paper-vintage">
               <div className="paper-vintage-bg"></div>
-              <span className="eyebrow" style={{ color: '#8A2D3C' }}>chapter three</span>
+              <span className="eyebrow" style={{ color: '#7A0923' }}>chapter four</span>
               <h3>The Game of Hearts</h3>
-              <p>Win a round of Tic-Tac-Toe to unlock the final secrets.</p>
+              <p>Win a round of Tic-Tac-Toe to unlock the memory match grid.</p>
 
               <div className="game-board">
                 {board.map((cell, idx) => (
@@ -591,15 +799,15 @@ export default function App() {
               <div className="game-status">{gameStatus}</div>
 
               {gameWinner && gameWinner !== playerSymbol && (
-                <button className="vintage-btn" onClick={resetGame} style={{ background: '#e0cfa5', marginRight: '10px' }}>
+                <button className="vintage-btn" onClick={resetGame} style={{ background: '#ECC695', marginRight: '10px' }}>
                   Try Again
                 </button>
               )}
 
               {gameWinner === playerSymbol && (
                 <div style={{ animation: 'pageFlipIn 0.5s ease forwards' }}>
-                  <button className="vintage-btn" onClick={() => setStage('reasons')}>
-                    Reveal Reasons
+                  <button className="vintage-btn" onClick={() => setStage('memory')}>
+                    Open Memory Match
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
                   </button>
                 </div>
@@ -608,13 +816,62 @@ export default function App() {
           </div>
         )}
 
-        {/* STAGE 4: REASONS & GALLERY */}
-        {stage === 'reasons' && (
+        {/* STAGE 5: MEMORY MATCH */}
+        {stage === 'memory' && (
+          <div className="stage-panel">
+            <div className="game-card paper-vintage" style={{ maxWidth: '500px' }}>
+              <div className="paper-vintage-bg"></div>
+              <span className="eyebrow" style={{ color: '#7A0923' }}>chapter five</span>
+              <h3>Memory Match</h3>
+              <p style={{ marginBottom: '1.5rem' }}>Match all 8 pairs of cards to unlock the final confession.</p>
+
+              <div className="memory-grid">
+                {memoryCards.map((card, idx) => {
+                  const isFlipped = card.isFlipped || card.isMatched;
+                  return (
+                    <div 
+                      key={card.id} 
+                      className={`memory-card ${isFlipped ? 'flipped' : ''} ${card.isMatched ? 'matched' : ''}`}
+                      onClick={() => handleMemoryCardClick(idx)}
+                    >
+                      <div className="memory-card-inner">
+                        <div className="memory-card-face memory-card-front"></div>
+                        <div className="memory-card-face memory-card-back">
+                          <div className="paper-vintage-bg"></div>
+                          {card.symbol}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div className="game-status">
+                {matchedPairsCount === symbols.length 
+                  ? "Pairs matched! The final door is open." 
+                  : `Pairs matched: ${matchedPairsCount} / ${symbols.length}`
+                }
+              </div>
+
+              {matchedPairsCount === symbols.length && (
+                <div style={{ animation: 'pageFlipIn 0.5s ease forwards' }}>
+                  <button className="vintage-btn" onClick={() => setStage('confession')}>
+                    Read Confession
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* STAGE 6: CONFESSION */}
+        {stage === 'confession' && (
           <div className="stage-panel">
             {/* Reasons Grid */}
             <section style={{ marginBottom: '4rem' }}>
               <div className="section-inner">
-                <span className="eyebrow">chapter four</span>
+                <span className="eyebrow">chapter six</span>
                 <div className="heart-divider">
                   <svg viewBox="0 0 32 29"><path d="M23.6 0c-3 0-5.7 1.7-7.6 4.4C14.1 1.7 11.4 0 8.4 0 3.8 0 0 3.9 0 8.8c0 8.4 8.6 13 15.4 19.6.3.3.9.3 1.2 0C23.4 21.8 32 17.2 32 8.8 32 3.9 28.2 0 23.6 0z"/></svg>
                 </div>
@@ -623,8 +880,7 @@ export default function App() {
                   {reasons.map((r, i) => (
                     <div 
                       key={i} 
-                      className={`flip-card reveal ${flippedCards[i] ? 'flipped' : ''}`}
-                      onClick={() => toggleCard(i)}
+                      className="flip-card reveal"
                     >
                       <div className="flip-inner">
                         <div className="flip-face flip-front">
@@ -642,9 +898,9 @@ export default function App() {
             </section>
 
             {/* Gallery */}
-            <section>
+            <section style={{ marginBottom: '4rem' }}>
               <div className="section-inner" style={{ maxWidth: '1000px' }}>
-                <span className="eyebrow">chapter five</span>
+                <span className="eyebrow">chapter seven</span>
                 <div className="heart-divider">
                   <svg viewBox="0 0 32 29"><path d="M23.6 0c-3 0-5.7 1.7-7.6 4.4C14.1 1.7 11.4 0 8.4 0 3.8 0 0 3.9 0 8.8c0 8.4 8.6 13 15.4 19.6.3.3.9.3 1.2 0C23.4 21.8 32 17.2 32 8.8 32 3.9 28.2 0 23.6 0z"/></svg>
                 </div>
@@ -662,21 +918,10 @@ export default function App() {
                     </div>
                   ))}
                 </div>
-
-                <div style={{ textAlign: 'center', marginTop: '5rem' }}>
-                  <button className="vintage-btn" onClick={() => setStage('confession')}>
-                    Final Letter
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-                  </button>
-                </div>
               </div>
             </section>
-          </div>
-        )}
 
-        {/* STAGE 5: CONFESSION */}
-        {stage === 'confession' && (
-          <div className="stage-panel">
+            {/* Final Letter */}
             <div className="closing-card paper-vintage">
               <div className="paper-vintage-bg"></div>
               <h2>So here's the truth: every version of my future has you in it.</h2>
@@ -688,7 +933,7 @@ export default function App() {
 
       </div>
 
-      {/* 9. Footer */}
+      {/* Footer */}
       <footer>made with more care than code, for [Her Name] · [Year]</footer>
     </>
   );
