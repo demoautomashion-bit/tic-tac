@@ -32,31 +32,29 @@ body{
 
 h1,h2,h3{ font-family: var(--serif); font-weight: 500; line-height: 1.15; }
 
-/* ---------- PARCHMENT / VINTAGE PAPER STYLE ---------- */
+/* ---------- PARCHMENT / VINTAGE PAPER STYLE (100% Pure CSS) ---------- */
 .paper-vintage {
   position: relative;
   color: var(--ink);
   background: var(--parchment);
   background-image: 
-    radial-gradient(circle at 50% 50%, transparent 55%, rgba(139, 90, 43, 0.12)), 
+    radial-gradient(circle at 50% 50%, transparent 50%, rgba(139, 90, 43, 0.14)), 
     radial-gradient(circle at 15% 25%, rgba(139, 90, 43, 0.08) 0%, transparent 40%),
     radial-gradient(circle at 85% 75%, rgba(139, 90, 43, 0.08) 0%, transparent 40%);
   box-shadow: 
-    inset 0 0 40px rgba(139, 90, 43, 0.18), 
+    inset 0 0 35px rgba(139, 90, 43, 0.2), 
     0 15px 35px rgba(0, 0, 0, 0.55);
-  border: 1px solid rgba(139, 90, 43, 0.18);
+  border: 1px solid rgba(139, 90, 43, 0.22);
   border-radius: 12px;
   overflow: hidden;
   z-index: 1;
 }
 
-/* Optional extra paper texture filter element */
 .paper-vintage-bg {
   position: absolute;
   inset: 0;
   z-index: 0;
   background: inherit;
-  filter: url(#paper-texture);
   pointer-events: none;
 }
 
@@ -105,12 +103,13 @@ h1,h2,h3{ font-family: var(--serif); font-weight: 500; line-height: 1.15; }
   60%{ transform:scale(1); }
 }
 
+/* PRELOADER VEIL FIX: Unmounts cleanly with display:none */
 .veil{
   position: fixed; inset:0; background: var(--bg-dark-1); z-index: 500;
   display:flex; align-items:center; justify-content:center;
   transition: opacity 0.9s ease, visibility 0.9s ease;
 }
-.veil.hide{ opacity:0; visibility:hidden; pointer-events:none; }
+.veil.hide{ opacity:0; visibility:hidden; pointer-events:none; display: none !important; }
 .veil-text{ font-family: var(--script); font-size: 2.8rem; color: var(--champagne); opacity:0.85; }
 
 /* ---------- STAGE CONTAINERS & TRANSITIONS ---------- */
@@ -210,10 +209,12 @@ h1,h2,h3{ font-family: var(--serif); font-weight: 500; line-height: 1.15; }
 .env-body{
   position:absolute; inset:0;
   background: linear-gradient(155deg, var(--parchment), var(--parchment-stain));
+  background-image: 
+    radial-gradient(circle at 50% 50%, transparent 50%, rgba(139, 90, 43, 0.14)), 
+    radial-gradient(circle at 15% 25%, rgba(139, 90, 43, 0.08) 0%, transparent 40%);
   border-radius: 6px;
   box-shadow: 0 20px 45px rgba(0,0,0,0.65);
-  border: 1px solid rgba(139, 90, 43, 0.2);
-  filter: url(#paper-texture);
+  border: 1px solid rgba(139, 90, 43, 0.22);
 }
 
 .env-flap{
@@ -226,7 +227,6 @@ h1,h2,h3{ font-family: var(--serif); font-weight: 500; line-height: 1.15; }
   box-shadow: 0 2px 6px rgba(0,0,0,0.12);
   border-radius: 6px 6px 0 0;
   z-index: 3;
-  filter: url(#paper-texture);
 }
 .env-seal{
   position:absolute; top: 44%; left:50%; transform: translate(-50%,-50%);
@@ -248,6 +248,9 @@ h1,h2,h3{ font-family: var(--serif); font-weight: 500; line-height: 1.15; }
   position:absolute; left:8%; right:8%; top:10%;
   height: 82%;
   background: var(--parchment);
+  background-image: 
+    radial-gradient(circle at 50% 50%, transparent 50%, rgba(139, 90, 43, 0.14));
+  border: 1px solid rgba(139, 90, 43, 0.2);
   border-radius: 4px;
   transform: translateY(6%) scale(0.94);
   opacity: 0;
@@ -529,7 +532,6 @@ section{ position:relative; padding: 2rem 0; width: 100%; }
   transform: rotateY(180deg);
   border: 1px solid rgba(139, 90, 43, 0.15);
   box-shadow: inset 0 0 10px rgba(139, 90, 43, 0.1);
-  filter: url(#paper-texture);
 }
 .memory-card.matched .memory-card-back {
   background: rgba(76, 175, 80, 0.15) !important;
