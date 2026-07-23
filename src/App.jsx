@@ -1,31 +1,147 @@
 import { useEffect, useState, useRef } from 'react';
 import confetti from 'canvas-confetti';
 
+// Helper to Base64 encode / decode configuration JSON
+const encodeConfig = (config) => {
+  try {
+    const str = JSON.stringify(config);
+    return btoa(unescape(encodeURIComponent(str)));
+  } catch (e) {
+    console.error(e);
+    return '';
+  }
+};
+
+const decodeConfig = (base64Str) => {
+  try {
+    const decoded = decodeURIComponent(escape(atob(base64Str)));
+    return JSON.parse(decoded);
+  } catch (e) {
+    console.error(e);
+    return null;
+  }
+};
+
+const DEFAULT_FLOW = [
+  { 
+    id: 'envelope', 
+    type: 'envelope', 
+    label: 'For Her Name', 
+    letter: "...I've been meaning to tell you something..." 
+  },
+  { 
+    id: 'quiz1', 
+    type: 'quiz', 
+    eyebrow: 'chapter one', 
+    title: 'First Milestone', 
+    question: "Where did we first cross paths?", 
+    options: [
+      "The cozy local coffee shop",
+      "Under the roof of the library study room",
+      "Waiting at that rainy bus stop",
+      "A mutual friend's birthday gathering"
+    ], 
+    correctIndex: 2, 
+    successText: "Correct! You remember. Now, let's explore our story..." 
+  },
+  { 
+    id: 'timeline', 
+    type: 'timeline', 
+    eyebrow: 'chapter two', 
+    title: 'How we found each other', 
+    intro: "I've been trying to find the right way to tell you this, so I built you something instead.\n\nThis isn't a card you'll lose in a drawer, or a text that gets buried under everything else. It's just... us, written down.\n\nSo take your time. Read through each milestone carefully.", 
+    signoff: "— Your Name", 
+    milestones: [
+      { title: "The day we met", date: "[Month, Year]", body: "[Describe how you first crossed paths. Where were you, what did she say, what did you notice first?]" },
+      { title: "Our first date", date: "[Month, Year]", body: "[Where you went, the thing that made you both laugh, the moment you knew you wanted a second one.]" },
+      { title: "The trip that changed things", date: "[Month, Year]", body: "[A trip, a late night, a hard time you got through together. Whatever made it feel real.]" },
+      { title: "Still here, still us", date: "Today", body: "[A line about where you are now, and why you're still choosing each other.]" }
+    ] 
+  },
+  { 
+    id: 'quiz2', 
+    type: 'quiz', 
+    eyebrow: 'chapter three', 
+    title: 'Secret Quirks', 
+    question: "What is my absolute favorite way to spend a lazy Sunday with you?", 
+    options: [
+      "Going on an intensive hiking trail",
+      "Sleeping in late and ordering takeout pancakes",
+      "Spending the whole day doing household chores",
+      "Running bulk errands at the supermarket"
+    ], 
+    correctIndex: 1, 
+    successText: "Absolutely correct! Now let's play a game of hearts." 
+  },
+  { 
+    id: 'tictactoe', 
+    type: 'tictactoe', 
+    eyebrow: 'chapter four', 
+    title: 'The Game of Hearts', 
+    instruction: 'Win a round of Tic-Tac-Toe to unlock the next stage.' 
+  },
+  { 
+    id: 'memory', 
+    type: 'memory', 
+    eyebrow: 'chapter five', 
+    title: 'Memory Match', 
+    instruction: 'Match all 8 pairs of cards to unlock the final confession.', 
+    symbols: ['❤️', '🌸', '🎁', '✈️', '🍿', '🧸', '🍕', '☕'] 
+  },
+  { 
+    id: 'confession', 
+    type: 'confession', 
+    eyebrow: 'chapter six', 
+    title: 'Reasons, in no particular order', 
+    reasons: [
+      "The way you laugh at your own jokes before you even finish them.",
+      "How you narrate what your pet is thinking, in full voice.",
+      "You remember the small stuff — the order I forgot I mentioned once.",
+      "The way you fall asleep mid-sentence and deny it every time.",
+      "How you make even the worst days feel manageable.",
+      "You're the only person whose opinion on this actually matters to me.",
+      "The playlist you made me that one time, still on repeat.",
+      "Just... you. All of it. Even the mornings."
+    ], 
+    polaroids: [
+      { cap: "that one weekend", rot: -2 },
+      { cap: "the road trip", rot: 3 },
+      { cap: "your birthday", rot: -4 },
+      { cap: "just because", rot: 1 },
+      { cap: "the rainy day", rot: -3 },
+      { cap: "the good year", rot: 4 }
+    ], 
+    closingLetter: "So here's the truth: every version of my future has you in it.", 
+    closingSig: "— always, Your Name", 
+    recipientName: "Her Name", 
+    footerYear: "2026" 
+  }
+];
+
 export default function App() {
-  const [stage, setStage] = useState('envelope'); // 'envelope', 'quiz1', 'timeline', 'quiz2', 'tictactoe', 'memory', 'confession'
-  
-  // Envelope opening state classes ('', 'open-step1', 'open-step1 open-step2', 'open-step1 open-step2 open-step3')
+  const [flowConfig, setFlowConfig] = useState([]);
+  const [currentStepIndex, setCurrentStepIndex] = useState(0);
+  const [isCustomizerOpen, setIsCustomizerOpen] = useState(false);
+  const [editingStepIndex, setEditingStepIndex] = useState(null);
+  const [copiedLink, setCopiedLink] = useState(false);
+
+  // Envelope opening state classes
   const [envOpenClass, setEnvOpenClass] = useState('');
 
-  // Quiz 1 States
-  const [selectedQuiz1Opt, setSelectedQuiz1Opt] = useState(null);
-  const [quiz1Status, setQuiz1Status] = useState('idle'); // 'idle', 'correct', 'incorrect'
-  const [shakeQuiz1Card, setShakeQuiz1Card] = useState(false);
+  // General Quiz States
+  const [selectedQuizOpt, setSelectedQuizOpt] = useState(null);
+  const [quizStatus, setQuizStatus] = useState('idle'); // 'idle', 'correct', 'incorrect'
+  const [shakeQuizCard, setShakeQuizCard] = useState(false);
 
-  // Timeline Read Milestones checklist
-  const [readMilestones, setReadMilestones] = useState({ 0: false, 1: false, 2: false, 3: false });
-
-  // Quiz 2 States
-  const [selectedQuiz2Opt, setSelectedQuiz2Opt] = useState(null);
-  const [quiz2Status, setQuiz2Status] = useState('idle'); // 'idle', 'correct', 'incorrect'
-  const [shakeQuiz2Card, setShakeQuiz2Card] = useState(false);
+  // Timeline Milestone progress
+  const [readMilestones, setReadMilestones] = useState({});
 
   // Tic-Tac-Toe States
   const [board, setBoard] = useState(Array(9).fill(null));
   const [playerSymbol] = useState('❤️');
   const [aiSymbol] = useState('⭕');
   const [isPlayerTurn, setIsPlayerTurn] = useState(true);
-  const [gameWinner, setGameWinner] = useState(null); // '❤️', '⭕', 'Draw', null
+  const [gameWinner, setGameWinner] = useState(null);
   const [gameStatus, setGameStatus] = useState('Your turn! Place a heart on the grid.');
 
   // Memory Match States
@@ -33,33 +149,69 @@ export default function App() {
   const [selectedMemoryIndices, setSelectedMemoryIndices] = useState([]);
   const [matchedPairsCount, setMatchedPairsCount] = useState(0);
 
-  // Final Signature Confetti
+  // Confession states
   const [sigText, setSigText] = useState('one more thing');
 
   const canvasRef = useRef(null);
 
-  // Quiz 1 Data
-  const quiz1Data = {
-    question: "Where did we first cross paths?",
-    options: [
-      "The cozy local coffee shop",
-      "Under the roof of the library study room",
-      "Waiting at that rainy bus stop",
-      "A mutual friend's birthday gathering"
-    ],
-    correctIndex: 2
+  // Initialize flowConfig from URL hash, localStorage, or defaults
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const cardParam = params.get('card');
+    
+    if (cardParam) {
+      const decoded = decodeConfig(cardParam);
+      if (decoded && Array.isArray(decoded)) {
+        setFlowConfig(decoded);
+        return;
+      }
+    }
+
+    const saved = localStorage.getItem('custom_flow_config');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          setFlowConfig(parsed);
+          return;
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    setFlowConfig(DEFAULT_FLOW);
+  }, []);
+
+  const resetGameStates = () => {
+    setSelectedQuizOpt(null);
+    setQuizStatus('idle');
+    setShakeQuizCard(false);
+    setReadMilestones({});
+    setBoard(Array(9).fill(null));
+    setGameWinner(null);
+    setIsPlayerTurn(true);
+    setGameStatus('Your turn! Place a heart on the grid.');
+    setMemoryCards([]);
+    setSelectedMemoryIndices([]);
+    setMatchedPairsCount(0);
+    setSigText('one more thing');
   };
 
-  // Quiz 2 Data
-  const quiz2Data = {
-    question: "What is my absolute favorite way to spend a lazy Sunday with you?",
-    options: [
-      "Going on an intensive hiking trail",
-      "Sleeping in late and ordering takeout pancakes",
-      "Spending the whole day doing household chores",
-      "Running bulk errands at the supermarket"
-    ],
-    correctIndex: 1
+  const currentStep = flowConfig[currentStepIndex] || {};
+
+  const handleNextStep = () => {
+    resetGameStates();
+    if (currentStepIndex < flowConfig.length - 1) {
+      setCurrentStepIndex(currentStepIndex + 1);
+    }
+  };
+
+  const handlePrevStep = () => {
+    resetGameStates();
+    if (currentStepIndex > 0) {
+      setCurrentStepIndex(currentStepIndex - 1);
+    }
   };
 
   // Helper for safe matchMedia checks
@@ -164,7 +316,7 @@ export default function App() {
     };
   }, []);
 
-  // 2. Cursor Heart Trail (fine pointers only, respects reduced motion)
+  // 2. Cursor Heart Trail
   useEffect(() => {
     if (getReduceMotion() || !getFinePointer()) return;
 
@@ -204,11 +356,11 @@ export default function App() {
 
     revealEls.forEach(el => io.observe(el));
     return () => revealEls.forEach(el => io.unobserve(el));
-  }, [stage]);
+  }, [currentStepIndex, flowConfig]);
 
   // 4. Timeline Line & Item Reveal
   useEffect(() => {
-    if (stage !== 'timeline') return;
+    if (currentStep.type !== 'timeline') return;
     const timelineLine = document.getElementById('timelineLine');
     const timelineSection = document.querySelector('.timeline');
     
@@ -233,11 +385,11 @@ export default function App() {
       if (timelineSection) ioLine.unobserve(timelineSection);
       items.forEach(item => ioItem.unobserve(item));
     };
-  }, [stage]);
+  }, [currentStepIndex, flowConfig]);
 
   // 5. Reasons 3D Hover-Tilt Effect
   useEffect(() => {
-    if (stage !== 'confession') return;
+    if (currentStep.type !== 'confession') return;
     if (getReduceMotion()) return;
 
     const cards = document.querySelectorAll('.flip-card');
@@ -271,50 +423,47 @@ export default function App() {
         if (card._leaveListener) card.removeEventListener('mouseleave', card._leaveListener);
       });
     };
-  }, [stage]);
+  }, [currentStepIndex, flowConfig]);
 
   // ---------- ENVELOPE MULTI-PHASE TRANSITION ----------
   const handleOpenEnvelope = () => {
     if (envOpenClass !== '') return;
 
-    // Step 1: Flap Opens
     setEnvOpenClass('open-step1');
 
-    // Step 2: Letter slides out of pocket
     setTimeout(() => {
       setEnvOpenClass('open-step1 open-step2');
     }, 900);
 
-    // Step 3: Letter scales/flies toward full screen
     setTimeout(() => {
       setEnvOpenClass('open-step1 open-step2 open-step3');
     }, 2000);
 
-    // Step 4: Transition completely into Stage 1
     setTimeout(() => {
-      setStage('quiz1');
+      handleNextStep();
+      setEnvOpenClass('');
     }, 2900);
   };
 
-  // ---------- QUIZ 1 EVENT HANDLERS ----------
-  const handleQuiz1Selection = (index) => {
-    if (quiz1Status === 'correct') return;
-    setSelectedQuiz1Opt(index);
+  // ---------- QUIZ EVENT HANDLERS ----------
+  const handleQuizSelection = (index) => {
+    if (quizStatus === 'correct') return;
+    setSelectedQuizOpt(index);
 
-    if (index === quiz1Data.correctIndex) {
-      setQuiz1Status('correct');
+    if (index === currentStep.correctIndex) {
+      setQuizStatus('correct');
       confetti({
         particleCount: 45,
         spread: 50,
         origin: { y: 0.8 }
       });
     } else {
-      setQuiz1Status('incorrect');
-      setShakeQuiz1Card(true);
+      setQuizStatus('incorrect');
+      setShakeQuizCard(true);
       setTimeout(() => {
-        setShakeQuiz1Card(false);
-        setSelectedQuiz1Opt(null);
-        setQuiz1Status('idle');
+        setShakeQuizCard(false);
+        setSelectedQuizOpt(null);
+        setQuizStatus('idle');
       }, 500);
     }
   };
@@ -327,30 +476,9 @@ export default function App() {
     }));
   };
 
-  const allMilestonesRead = Object.values(readMilestones).every(status => status === true);
-
-  // ---------- QUIZ 2 EVENT HANDLERS ----------
-  const handleQuiz2Selection = (index) => {
-    if (quiz2Status === 'correct') return;
-    setSelectedQuiz2Opt(index);
-
-    if (index === quiz2Data.correctIndex) {
-      setQuiz2Status('correct');
-      confetti({
-        particleCount: 45,
-        spread: 50,
-        origin: { y: 0.8 }
-      });
-    } else {
-      setQuiz2Status('incorrect');
-      setShakeQuiz2Card(true);
-      setTimeout(() => {
-        setShakeQuiz2Card(false);
-        setSelectedQuiz2Opt(null);
-        setQuiz2Status('idle');
-      }, 500);
-    }
-  };
+  const milestonesLength = currentStep.milestones?.length || 0;
+  const totalTimelineRead = Object.values(readMilestones).filter(Boolean).length;
+  const allMilestonesRead = milestonesLength > 0 && totalTimelineRead === milestonesLength;
 
   // ---------- TIC-TAC-TOE GAME LOGIC ----------
   const winCombos = [
@@ -386,9 +514,8 @@ export default function App() {
     }
   };
 
-  // AI Opponent Strategy
   useEffect(() => {
-    if (isPlayerTurn || gameWinner || stage !== 'tictactoe') return;
+    if (isPlayerTurn || gameWinner || currentStep.type !== 'tictactoe') return;
 
     const aiTimer = setTimeout(() => {
       const emptyCells = board.map((cell, idx) => cell === null ? idx : null).filter(val => val !== null);
@@ -406,7 +533,7 @@ export default function App() {
         }
       }
 
-      // Block player from winning
+      // Block player
       if (aiMove === null) {
         for (let cell of emptyCells) {
           const boardCopy = [...board];
@@ -418,7 +545,7 @@ export default function App() {
         }
       }
 
-      // Choose random
+      // Random choice
       if (aiMove === null) {
         const randomIndex = Math.floor(Math.random() * emptyCells.length);
         aiMove = emptyCells[randomIndex];
@@ -438,7 +565,7 @@ export default function App() {
     }, 600);
 
     return () => clearTimeout(aiTimer);
-  }, [isPlayerTurn, board, gameWinner, stage]);
+  }, [isPlayerTurn, board, gameWinner, currentStep]);
 
   const handleGameOver = (winner) => {
     setGameWinner(winner);
@@ -456,7 +583,7 @@ export default function App() {
     }
   };
 
-  const resetGame = () => {
+  const resetTicTacToe = () => {
     setBoard(Array(9).fill(null));
     setGameWinner(null);
     setIsPlayerTurn(true);
@@ -464,10 +591,9 @@ export default function App() {
   };
 
   // ---------- MEMORY MATCH GAME LOGIC ----------
-  const symbols = ['❤️', '🌸', '🎁', '✈️', '🍿', '🧸', '🍕', '☕'];
-
   const initMemoryGame = () => {
-    const doubleSymbols = [...symbols, ...symbols];
+    const symbolsList = currentStep.symbols || ['❤️', '🌸', '🎁', '✈️', '🍿', '🧸', '🍕', '☕'];
+    const doubleSymbols = [...symbolsList, ...symbolsList];
     const shuffled = doubleSymbols
       .map((sym, idx) => ({ id: idx, symbol: sym, isFlipped: false, isMatched: false }))
       .sort(() => Math.random() - 0.5);
@@ -478,10 +604,10 @@ export default function App() {
   };
 
   useEffect(() => {
-    if (stage === 'memory') {
+    if (currentStep.type === 'memory') {
       initMemoryGame();
     }
-  }, [stage]);
+  }, [currentStepIndex, flowConfig]);
 
   const handleMemoryCardClick = (idx) => {
     if (
@@ -497,6 +623,8 @@ export default function App() {
     const newSelections = [...selectedMemoryIndices, idx];
     setSelectedMemoryIndices(newSelections);
 
+    const symbolsLength = currentStep.symbols?.length || 8;
+
     if (newSelections.length === 2) {
       const [firstIdx, secondIdx] = newSelections;
       if (memoryCards[firstIdx].symbol === memoryCards[secondIdx].symbol) {
@@ -508,7 +636,7 @@ export default function App() {
           setSelectedMemoryIndices([]);
           setMatchedPairsCount(prev => {
             const nextCount = prev + 1;
-            if (nextCount === symbols.length) {
+            if (nextCount === symbolsLength) {
               confetti({
                 particleCount: 65,
                 spread: 70,
@@ -542,48 +670,459 @@ export default function App() {
     setSigText('I mean it.');
   };
 
-  // Timeline chapters
-  const timelineData = [
-    { title: "The day we met", date: "[Month, Year]", body: "[Placeholder — describe how you first crossed paths. Where were you, what did she say, what did you notice first?]" },
-    { title: "Our first date", date: "[Month, Year]", body: "[Placeholder — where you went, the thing that made you both laugh, the moment you knew you wanted a second one.]" },
-    { title: "The trip that changed things", date: "[Month, Year]", body: "[Placeholder — a trip, a late night, a hard time you got through together. Whatever made it feel real.]" },
-    { title: "Still here, still us", date: "Today", body: "[Placeholder — a line about where you are now, and why you're still choosing each other.]" }
-  ];
+  // ---------- CUSTOMIZER OPERATIONS ----------
+  const handleSaveToLocalStorage = (updatedFlow) => {
+    localStorage.setItem('custom_flow_config', JSON.stringify(updatedFlow));
+    setFlowConfig(updatedFlow);
+    resetGameStates();
+    setCurrentStepIndex(0);
+  };
 
-  // Reasons list data
-  const reasons = [
-    "The way you laugh at your own jokes before you even finish them.",
-    "How you narrate what your pet is thinking, in full voice.",
-    "You remember the small stuff — the order I forgot I mentioned once.",
-    "The way you fall asleep mid-sentence and deny it every time.",
-    "How you make even the worst days feel manageable.",
-    "You're the only person whose opinion on this actually matters to me.",
-    "The playlist you made me that one time, still on repeat.",
-    "Just... you. All of it. Even the mornings."
-  ];
+  const handleResetToDefault = () => {
+    if (window.confirm("Reset all customizations to default template?")) {
+      localStorage.removeItem('custom_flow_config');
+      setFlowConfig(DEFAULT_FLOW);
+      resetGameStates();
+      setCurrentStepIndex(0);
+      setEditingStepIndex(null);
+    }
+  };
 
-  // Polaroid moments
-  const polaroids = [
-    { cap: "that one weekend", rot: -2 },
-    { cap: "the road trip", rot: 3 },
-    { cap: "your birthday", rot: -4 },
-    { cap: "just because", rot: 1 },
-    { cap: "the rainy day", rot: -3 },
-    { cap: "the good year", rot: 4 }
-  ];
+  const handleMoveUp = (index) => {
+    if (index === 0) return;
+    const newFlow = [...flowConfig];
+    const temp = newFlow[index];
+    newFlow[index] = newFlow[index - 1];
+    newFlow[index - 1] = temp;
+    handleSaveToLocalStorage(newFlow);
+    if (editingStepIndex === index) setEditingStepIndex(index - 1);
+    else if (editingStepIndex === index - 1) setEditingStepIndex(index);
+  };
 
-  const totalTimelineRead = Object.values(readMilestones).filter(Boolean).length;
+  const handleMoveDown = (index) => {
+    if (index === flowConfig.length - 1) return;
+    const newFlow = [...flowConfig];
+    const temp = newFlow[index];
+    newFlow[index] = newFlow[index + 1];
+    newFlow[index + 1] = temp;
+    handleSaveToLocalStorage(newFlow);
+    if (editingStepIndex === index) setEditingStepIndex(index + 1);
+    else if (editingStepIndex === index + 1) setEditingStepIndex(index);
+  };
+
+  const handleDeleteStep = (index) => {
+    if (flowConfig.length <= 1) {
+      alert("You need at least one step in the flow!");
+      return;
+    }
+    if (window.confirm("Are you sure you want to delete this step?")) {
+      const newFlow = flowConfig.filter((_, i) => i !== index);
+      handleSaveToLocalStorage(newFlow);
+      setEditingStepIndex(null);
+    }
+  };
+
+  const handleAddStep = (type) => {
+    const newStep = { id: `step_${Date.now()}`, type };
+    if (type === 'quiz') {
+      newStep.eyebrow = 'new chapter';
+      newStep.title = 'Custom Trivia';
+      newStep.question = 'Change this question?';
+      newStep.options = ['Option A', 'Option B', 'Option C', 'Option D'];
+      newStep.correctIndex = 0;
+      newStep.successText = 'Correct answer!';
+    } else if (type === 'timeline') {
+      newStep.eyebrow = 'new chapter';
+      newStep.title = 'Custom Timeline';
+      newStep.intro = 'An introduction to our milestones...';
+      newStep.signoff = '— Your Name';
+      newStep.milestones = [{ title: 'Milestone Title', date: 'Date/Year', body: 'Milestone description goes here...' }];
+    } else if (type === 'tictactoe') {
+      newStep.eyebrow = 'new chapter';
+      newStep.title = 'The Game of Hearts';
+      newStep.instruction = 'Win a game of Tic-Tac-Toe to continue.';
+    } else if (type === 'memory') {
+      newStep.eyebrow = 'new chapter';
+      newStep.title = 'Memory Match';
+      newStep.instruction = 'Match the cards to proceed.';
+      newStep.symbols = ['❤️', '⭐', '🎈', '☀️', '☕', '🧁', '🎵', '🎨'];
+    } else if (type === 'confession') {
+      newStep.eyebrow = 'new chapter';
+      newStep.title = 'Our Final Chapter';
+      newStep.reasons = ['Reason number one...'];
+      newStep.polaroids = [{ cap: "Caption", rot: 0 }];
+      newStep.closingLetter = "The final love note text...";
+      newStep.closingSig = "— always, Your Name";
+      newStep.recipientName = "Her Name";
+      newStep.footerYear = "2026";
+    }
+
+    const newFlow = [...flowConfig, newStep];
+    handleSaveToLocalStorage(newFlow);
+    setEditingStepIndex(newFlow.length - 1);
+  };
+
+  const handleUpdateStepProperty = (index, property, value) => {
+    const newFlow = [...flowConfig];
+    newFlow[index] = { ...newFlow[index], [property]: value };
+    handleSaveToLocalStorage(newFlow);
+  };
+
+  const generateSharingLink = () => {
+    const hash = encodeConfig(flowConfig);
+    const origin = window.location.origin + window.location.pathname;
+    const link = `${origin}?card=${hash}`;
+    navigator.clipboard.writeText(link);
+    setCopiedLink(true);
+    setTimeout(() => setCopiedLink(false), 2000);
+  };
 
   return (
     <>
-      {/* 1. Fireflies Canvas Background */}
+      {/* 1. Fireflies Background */}
       <canvas ref={canvasRef} style={{ position: 'fixed', inset: 0, zIndex: -1, pointerEvents: 'none' }} />
+
+      {/* Floating Customize Toggle Button */}
+      <button 
+        className="customizer-toggle" 
+        onClick={() => setIsCustomizerOpen(!isCustomizerOpen)}
+        aria-label="Toggle customizer panel"
+      >
+        ⚙️
+      </button>
+
+      {/* CUSTOMIZER PANEL SIDEBAR */}
+      <div className={`customizer-panel ${isCustomizerOpen ? 'open' : ''}`}>
+        <div className="customizer-header">
+          <h2>Card Customizer</h2>
+          <button className="close-btn" onClick={() => setIsCustomizerOpen(false)}>×</button>
+        </div>
+
+        <div className="customizer-content">
+          <div className="customizer-section">
+            <h3>Manage Flow & Steps</h3>
+            <p style={{ fontSize: '0.8rem', opacity: 0.7, marginBottom: '1rem' }}>
+              Arrange the sequence of mini-games and quizzes below:
+            </p>
+            {flowConfig.map((step, idx) => (
+              <div className="game-list-item" key={step.id}>
+                <div className="game-list-item-header">
+                  <span className="game-title-badge">
+                    {idx + 1}. {step.type} {step.title ? `(${step.title})` : ''}
+                  </span>
+                  <div className="game-controls">
+                    <button className="game-ctrl-btn" disabled={idx === 0} onClick={() => handleMoveUp(idx)}>▲</button>
+                    <button className="game-ctrl-btn" disabled={idx === flowConfig.length - 1} onClick={() => handleMoveDown(idx)}>▼</button>
+                    <button className="game-ctrl-btn" onClick={() => setEditingStepIndex(editingStepIndex === idx ? null : idx)}>✏️</button>
+                    <button className="game-ctrl-btn" onClick={() => handleDeleteStep(idx)}>×</button>
+                  </div>
+                </div>
+
+                {editingStepIndex === idx && (
+                  <div className="game-edit-form">
+                    <div className="custom-input-group">
+                      <label>Eyebrow Text</label>
+                      <input 
+                        type="text" 
+                        value={step.eyebrow || ''} 
+                        onChange={(e) => handleUpdateStepProperty(idx, 'eyebrow', e.target.value)} 
+                      />
+                    </div>
+                    {step.type !== 'envelope' && (
+                      <div className="custom-input-group">
+                        <label>Title</label>
+                        <input 
+                          type="text" 
+                          value={step.title || ''} 
+                          onChange={(e) => handleUpdateStepProperty(idx, 'title', e.target.value)} 
+                        />
+                      </div>
+                    )}
+
+                    {/* Step-specific configurations */}
+                    {step.type === 'envelope' && (
+                      <>
+                        <div className="custom-input-group">
+                          <label>Envelope Label (To:)</label>
+                          <input 
+                            type="text" 
+                            value={step.label || ''} 
+                            onChange={(e) => handleUpdateStepProperty(idx, 'label', e.target.value)} 
+                          />
+                        </div>
+                        <div className="custom-input-group">
+                          <label>Inside Letter Sneak-peek</label>
+                          <input 
+                            type="text" 
+                            value={step.letter || ''} 
+                            onChange={(e) => handleUpdateStepProperty(idx, 'letter', e.target.value)} 
+                          />
+                        </div>
+                      </>
+                    )}
+
+                    {step.type === 'quiz' && (
+                      <>
+                        <div className="custom-input-group">
+                          <label>Question</label>
+                          <textarea 
+                            rows="2"
+                            value={step.question || ''} 
+                            onChange={(e) => handleUpdateStepProperty(idx, 'question', e.target.value)} 
+                          />
+                        </div>
+                        <div className="custom-input-group">
+                          <label>Options (select radio for correct answer)</label>
+                          {(step.options || []).map((opt, oIdx) => (
+                            <div key={oIdx} className="option-edit-row">
+                              <input 
+                                type="radio" 
+                                name={`correct-${idx}`} 
+                                checked={step.correctIndex === oIdx}
+                                onChange={() => handleUpdateStepProperty(idx, 'correctIndex', oIdx)}
+                              />
+                              <input 
+                                type="text" 
+                                value={opt} 
+                                onChange={(e) => {
+                                  const nextOpts = [...step.options];
+                                  nextOpts[oIdx] = e.target.value;
+                                  handleUpdateStepProperty(idx, 'options', nextOpts);
+                                }}
+                              />
+                            </div>
+                          ))}
+                        </div>
+                        <div className="custom-input-group">
+                          <label>Success Text</label>
+                          <input 
+                            type="text" 
+                            value={step.successText || ''} 
+                            onChange={(e) => handleUpdateStepProperty(idx, 'successText', e.target.value)} 
+                          />
+                        </div>
+                      </>
+                    )}
+
+                    {step.type === 'timeline' && (
+                      <>
+                        <div className="custom-input-group">
+                          <label>Intro Paragraphs</label>
+                          <textarea 
+                            rows="3"
+                            value={step.intro || ''} 
+                            onChange={(e) => handleUpdateStepProperty(idx, 'intro', e.target.value)} 
+                          />
+                        </div>
+                        <div className="custom-input-group">
+                          <label>Signoff Name</label>
+                          <input 
+                            type="text" 
+                            value={step.signoff || ''} 
+                            onChange={(e) => handleUpdateStepProperty(idx, 'signoff', e.target.value)} 
+                          />
+                        </div>
+                        <div className="custom-input-group">
+                          <label>Milestones</label>
+                          {(step.milestones || []).map((ms, mIdx) => (
+                            <div key={mIdx} style={{ border: '1px solid rgba(255,255,255,0.1)', padding: '0.5rem', borderRadius: '4px', marginBottom: '0.5rem' }}>
+                              <input 
+                                type="text" 
+                                placeholder="Milestone Title"
+                                value={ms.title} 
+                                style={{ marginBottom: '0.25rem' }}
+                                onChange={(e) => {
+                                  const nextMs = [...step.milestones];
+                                  nextMs[mIdx] = { ...nextMs[mIdx], title: e.target.value };
+                                  handleUpdateStepProperty(idx, 'milestones', nextMs);
+                                }}
+                              />
+                              <input 
+                                type="text" 
+                                placeholder="Date/Year"
+                                value={ms.date}
+                                style={{ marginBottom: '0.25rem' }}
+                                onChange={(e) => {
+                                  const nextMs = [...step.milestones];
+                                  nextMs[mIdx] = { ...nextMs[mIdx], date: e.target.value };
+                                  handleUpdateStepProperty(idx, 'milestones', nextMs);
+                                }}
+                              />
+                              <textarea 
+                                placeholder="Body text"
+                                value={ms.body}
+                                rows="2"
+                                onChange={(e) => {
+                                  const nextMs = [...step.milestones];
+                                  nextMs[mIdx] = { ...nextMs[mIdx], body: e.target.value };
+                                  handleUpdateStepProperty(idx, 'milestones', nextMs);
+                                }}
+                              />
+                              <button 
+                                className="game-ctrl-btn" 
+                                style={{ marginTop: '0.25rem', width: 'auto', padding: '0 0.5rem' }}
+                                onClick={() => {
+                                  const nextMs = step.milestones.filter((_, i) => i !== mIdx);
+                                  handleUpdateStepProperty(idx, 'milestones', nextMs);
+                                }}
+                              >
+                                Delete Milestone
+                              </button>
+                            </div>
+                          ))}
+                          <button 
+                            className="editor-btn-secondary"
+                            onClick={() => {
+                              const nextMs = [...(step.milestones || []), { title: 'New Event', date: 'Date', body: 'Description' }];
+                              handleUpdateStepProperty(idx, 'milestones', nextMs);
+                            }}
+                          >
+                            + Add Milestone
+                          </button>
+                        </div>
+                      </>
+                    )}
+
+                    {step.type === 'tictactoe' && (
+                      <div className="custom-input-group">
+                        <label>Instruction Text</label>
+                        <input 
+                          type="text" 
+                          value={step.instruction || ''} 
+                          onChange={(e) => handleUpdateStepProperty(idx, 'instruction', e.target.value)} 
+                        />
+                      </div>
+                    )}
+
+                    {step.type === 'memory' && (
+                      <>
+                        <div className="custom-input-group">
+                          <label>Instruction Text</label>
+                          <input 
+                            type="text" 
+                            value={step.instruction || ''} 
+                            onChange={(e) => handleUpdateStepProperty(idx, 'instruction', e.target.value)} 
+                          />
+                        </div>
+                        <div className="custom-input-group">
+                          <label>Emojis/Cards (separated by commas, total 8 required)</label>
+                          <input 
+                            type="text" 
+                            value={(step.symbols || []).join(', ')} 
+                            onChange={(e) => {
+                              const nextSyms = e.target.value.split(',').map(s => s.trim()).filter(Boolean);
+                              handleUpdateStepProperty(idx, 'symbols', nextSyms);
+                            }} 
+                          />
+                        </div>
+                      </>
+                    )}
+
+                    {step.type === 'confession' && (
+                      <>
+                        <div className="custom-input-group">
+                          <label>Recipient Name</label>
+                          <input 
+                            type="text" 
+                            value={step.recipientName || ''} 
+                            onChange={(e) => handleUpdateStepProperty(idx, 'recipientName', e.target.value)} 
+                          />
+                        </div>
+                        <div className="custom-input-group">
+                          <label>Closing Signature</label>
+                          <input 
+                            type="text" 
+                            value={step.closingSig || ''} 
+                            onChange={(e) => handleUpdateStepProperty(idx, 'closingSig', e.target.value)} 
+                          />
+                        </div>
+                        <div className="custom-input-group">
+                          <label>Closing Love Note</label>
+                          <textarea 
+                            rows="3"
+                            value={step.closingLetter || ''} 
+                            onChange={(e) => handleUpdateStepProperty(idx, 'closingLetter', e.target.value)} 
+                          />
+                        </div>
+                        <div className="custom-input-group">
+                          <label>Confession Reasons (one per line)</label>
+                          <textarea 
+                            rows="5"
+                            value={(step.reasons || []).join('\n')} 
+                            onChange={(e) => {
+                              const nextReasons = e.target.value.split('\n').filter(Boolean);
+                              handleUpdateStepProperty(idx, 'reasons', nextReasons);
+                            }} 
+                          />
+                        </div>
+                        <div className="custom-input-group">
+                          <label>Polaroid captions (one per line)</label>
+                          <textarea 
+                            rows="4"
+                            value={(step.polaroids || []).map(p => p.cap).join('\n')} 
+                            onChange={(e) => {
+                              const lines = e.target.value.split('\n').filter(Boolean);
+                              const nextPols = lines.map((line, lIdx) => {
+                                const oldPol = (step.polaroids || [])[lIdx] || {};
+                                return {
+                                  cap: line,
+                                  rot: oldPol.rot !== undefined ? oldPol.rot : (Math.random() * 8 - 4)
+                                };
+                              });
+                              handleUpdateStepProperty(idx, 'polaroids', nextPols);
+                            }} 
+                          />
+                        </div>
+                        <div className="custom-input-group">
+                          <label>Footer Year</label>
+                          <input 
+                            type="text" 
+                            value={step.footerYear || ''} 
+                            onChange={(e) => handleUpdateStepProperty(idx, 'footerYear', e.target.value)} 
+                          />
+                        </div>
+                      </>
+                    )}
+
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+
+          <div className="customizer-section">
+            <h3>Add New Chapter</h3>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+              <button className="editor-btn-secondary" style={{ marginTop: 0 }} onClick={() => handleAddStep('quiz')}>+ Quiz</button>
+              <button className="editor-btn-secondary" style={{ marginTop: 0 }} onClick={() => handleAddStep('timeline')}>+ Timeline</button>
+              <button className="editor-btn-secondary" style={{ marginTop: 0 }} onClick={() => handleAddStep('tictactoe')}>+ TicTacToe</button>
+              <button className="editor-btn-secondary" style={{ marginTop: 0 }} onClick={() => handleAddStep('memory')}>+ Memory</button>
+            </div>
+            <button className="editor-btn-secondary" onClick={() => handleAddStep('confession')}>+ Final Confession</button>
+          </div>
+        </div>
+
+        <div className="customizer-footer">
+          <button className="editor-btn-primary" onClick={generateSharingLink}>
+            {copiedLink ? "✓ Copied Link!" : "Copy Shareable Link"}
+          </button>
+          <button className="editor-btn-secondary" style={{ borderStyle: 'solid', marginTop: 0 }} onClick={handleResetToDefault}>
+            Reset to Default Flow
+          </button>
+        </div>
+      </div>
 
       {/* STAGE CONTAINER SHELL */}
       <div className="stage-container">
-        
-        {/* STAGE 0: ENVELOPE */}
-        {stage === 'envelope' && (
+        {/* Render indicator of current position */}
+        {flowConfig.length > 1 && (
+          <div style={{ position: 'absolute', top: '1rem', left: '1.5rem', fontFamily: 'var(--sans)', fontSize: '0.75rem', opacity: 0.6 }}>
+            Chapter {currentStepIndex + 1} of {flowConfig.length}
+          </div>
+        )}
+
+        {/* STEP 0: ENVELOPE */}
+        {currentStep.type === 'envelope' && (
           <div className="stage-panel" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
             <div className="envelope-wrap">
               <div className={`envelope-scene ${envOpenClass}`} id="envScene">
@@ -594,7 +1133,7 @@ export default function App() {
                   </div>
                   <div className="env-letter paper-vintage">
                     <div className="paper-vintage-bg"></div>
-                    <p>...I've been meaning to tell you something...</p>
+                    <p>{currentStep.letter}</p>
                   </div>
                   <div className="env-flap"></div>
                   <div className="env-seal">
@@ -602,7 +1141,7 @@ export default function App() {
                       <path d="M23.6 0c-3 0-5.7 1.7-7.6 4.4C14.1 1.7 11.4 0 8.4 0 3.8 0 0 3.9 0 8.8c0 8.4 8.6 13 15.4 19.6.3.3.9.3 1.2 0C23.4 21.8 32 17.2 32 8.8 32 3.9 28.2 0 23.6 0z"/>
                     </svg>
                   </div>
-                  <div className="env-label">For [Her Name]</div>
+                  <div className="env-label">{currentStep.label}</div>
                 </button>
               </div>
               <span className={`tap-prompt ${envOpenClass !== '' ? 'gone' : ''}`} id="tapPrompt">tap to open</span>
@@ -610,27 +1149,27 @@ export default function App() {
           </div>
         )}
 
-        {/* STAGE 1: TRIVIA QUIZ 1 */}
-        {stage === 'quiz1' && (
-          <div className={`stage-panel ${shakeQuiz1Card ? 'shake' : ''}`}>
+        {/* STEP TYPE: QUIZ */}
+        {currentStep.type === 'quiz' && (
+          <div className={`stage-panel ${shakeQuizCard ? 'shake' : ''}`}>
             <div className="quiz-card paper-vintage">
               <div className="paper-vintage-bg"></div>
-              <span className="eyebrow" style={{ color: '#7A0923' }}>chapter one</span>
-              <h3>First Milestone</h3>
-              <p className="question">{quiz1Data.question}</p>
+              {currentStep.eyebrow && <span className="eyebrow" style={{ color: '#7A0923' }}>{currentStep.eyebrow}</span>}
+              <h3>{currentStep.title}</h3>
+              <p className="question">{currentStep.question}</p>
 
               <div className="quiz-options">
-                {quiz1Data.options.map((option, idx) => {
+                {(currentStep.options || []).map((option, idx) => {
                   let optClass = '';
-                  if (selectedQuiz1Opt === idx) {
-                    optClass = quiz1Status === 'correct' ? 'correct' : 'incorrect';
+                  if (selectedQuizOpt === idx) {
+                    optClass = quizStatus === 'correct' ? 'correct' : 'incorrect';
                   }
                   return (
                     <button 
                       key={idx}
                       className={`quiz-option ${optClass}`}
-                      disabled={quiz1Status === 'correct'}
-                      onClick={() => handleQuiz1Selection(idx)}
+                      disabled={quizStatus === 'correct'}
+                      onClick={() => handleQuizSelection(idx)}
                     >
                       {option}
                     </button>
@@ -638,13 +1177,13 @@ export default function App() {
                 })}
               </div>
 
-              {quiz1Status === 'correct' && (
+              {quizStatus === 'correct' && (
                 <div style={{ marginTop: '2.5rem', animation: 'pageFlipIn 0.5s ease forwards' }}>
                   <p style={{ fontFamily: 'var(--serif)', fontStyle: 'italic', marginBottom: '1.5rem', color: '#1b5e20' }}>
-                    Correct! You remember. Now, let's explore our story...
+                    {currentStep.successText}
                   </p>
-                  <button className="vintage-btn" onClick={() => setStage('timeline')}>
-                    Open Story
+                  <button className="vintage-btn" onClick={handleNextStep}>
+                    Continue
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
                   </button>
                 </div>
@@ -653,34 +1192,32 @@ export default function App() {
           </div>
         )}
 
-        {/* STAGE 2: TIMELINE */}
-        {stage === 'timeline' && (
+        {/* STEP TYPE: TIMELINE */}
+        {currentStep.type === 'timeline' && (
           <div className="stage-panel">
-            {/* Greeting */}
             <section style={{ marginBottom: '3rem' }}>
               <div className="section-inner">
                 <div className="letter-card paper-vintage">
                   <div className="paper-vintage-bg"></div>
-                  <p>I've been trying to find the right way to tell you this, so I built you something instead.</p>
-                  <p>This isn't a card you'll lose in a drawer, or a text that gets buried under everything else. It's just... us, written down. The parts I don't say enough out loud.</p>
-                  <p>So take your time. Read through each milestone carefully.</p>
-                  <div className="signoff">— [Your Name]</div>
+                  {(currentStep.intro || '').split('\n\n').map((para, pIdx) => (
+                    <p key={pIdx}>{para}</p>
+                  ))}
+                  <div className="signoff">{currentStep.signoff}</div>
                 </div>
               </div>
             </section>
 
-            {/* Timeline */}
             <section>
               <div className="section-inner">
-                <span className="eyebrow">chapter two</span>
+                {currentStep.eyebrow && <span className="eyebrow">{currentStep.eyebrow}</span>}
                 <div className="heart-divider">
                   <svg viewBox="0 0 32 29"><path d="M23.6 0c-3 0-5.7 1.7-7.6 4.4C14.1 1.7 11.4 0 8.4 0 3.8 0 0 3.9 0 8.8c0 8.4 8.6 13 15.4 19.6.3.3.9.3 1.2 0C23.4 21.8 32 17.2 32 8.8 32 3.9 28.2 0 23.6 0z"/></svg>
                 </div>
-                <h2 className="section-title">How we found each other</h2>
+                <h2 className="section-title">{currentStep.title}</h2>
                 <div className="timeline">
                   <div className="timeline-line" id="timelineLine"></div>
 
-                  {timelineData.map((item, idx) => (
+                  {(currentStep.milestones || []).map((item, idx) => (
                     <div className="t-item" key={idx}>
                       <div className="t-card paper-vintage" onClick={() => toggleMilestoneRead(idx)}>
                         <div className="paper-vintage-bg"></div>
@@ -707,12 +1244,12 @@ export default function App() {
                 <div style={{ textAlign: 'center', marginTop: '4rem' }}>
                   <p style={{ fontFamily: 'var(--serif)', fontStyle: 'italic', marginBottom: '1.2rem', opacity: 0.85 }}>
                     {allMilestonesRead 
-                      ? "Milestones read! Ready for the next quiz." 
-                      : `Read all 4 memories to unlock the next stage. (${totalTimelineRead}/4 read)`
+                      ? "Milestones read! Ready to continue." 
+                      : `Read all ${milestonesLength} memories to unlock the next stage. (${totalTimelineRead}/${milestonesLength} read)`
                     }
                   </p>
-                  <button className="vintage-btn" disabled={!allMilestonesRead} onClick={() => setStage('quiz2')}>
-                    Next Quiz
+                  <button className="vintage-btn" disabled={!allMilestonesRead} onClick={handleNextStep}>
+                    Continue
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
                   </button>
                 </div>
@@ -721,57 +1258,14 @@ export default function App() {
           </div>
         )}
 
-        {/* STAGE 3: TRIVIA QUIZ 2 */}
-        {stage === 'quiz2' && (
-          <div className={`stage-panel ${shakeQuiz2Card ? 'shake' : ''}`}>
-            <div className="quiz-card paper-vintage">
-              <div className="paper-vintage-bg"></div>
-              <span className="eyebrow" style={{ color: '#7A0923' }}>chapter three</span>
-              <h3>Secret Quirks</h3>
-              <p className="question">{quiz2Data.question}</p>
-
-              <div className="quiz-options">
-                {quiz2Data.options.map((option, idx) => {
-                  let optClass = '';
-                  if (selectedQuiz2Opt === idx) {
-                    optClass = quiz2Status === 'correct' ? 'correct' : 'incorrect';
-                  }
-                  return (
-                    <button 
-                      key={idx}
-                      className={`quiz-option ${optClass}`}
-                      disabled={quiz2Status === 'correct'}
-                      onClick={() => handleQuiz2Selection(idx)}
-                    >
-                      {option}
-                    </button>
-                  );
-                })}
-              </div>
-
-              {quiz2Status === 'correct' && (
-                <div style={{ marginTop: '2.5rem', animation: 'pageFlipIn 0.5s ease forwards' }}>
-                  <p style={{ fontFamily: 'var(--serif)', fontStyle: 'italic', marginBottom: '1.5rem', color: '#1b5e20' }}>
-                    Absolutely correct! Now let's play a game of hearts.
-                  </p>
-                  <button className="vintage-btn" onClick={() => setStage('tictactoe')}>
-                    Play Tic-Tac-Toe
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* STAGE 4: TIC-TAC-TOE */}
-        {stage === 'tictactoe' && (
+        {/* STEP TYPE: TIC-TAC-TOE */}
+        {currentStep.type === 'tictactoe' && (
           <div className="stage-panel">
             <div className="game-card paper-vintage">
               <div className="paper-vintage-bg"></div>
-              <span className="eyebrow" style={{ color: '#7A0923' }}>chapter four</span>
-              <h3>The Game of Hearts</h3>
-              <p>Win a round of Tic-Tac-Toe to unlock the memory match grid.</p>
+              {currentStep.eyebrow && <span className="eyebrow" style={{ color: '#7A0923' }}>{currentStep.eyebrow}</span>}
+              <h3>{currentStep.title}</h3>
+              <p>{currentStep.instruction}</p>
 
               <div className="game-board">
                 {board.map((cell, idx) => (
@@ -788,15 +1282,15 @@ export default function App() {
               <div className="game-status">{gameStatus}</div>
 
               {gameWinner && gameWinner !== playerSymbol && (
-                <button className="vintage-btn" onClick={resetGame} style={{ background: '#ECC695', marginRight: '10px' }}>
+                <button className="vintage-btn" onClick={resetTicTacToe} style={{ background: '#ECC695', marginRight: '10px' }}>
                   Try Again
                 </button>
               )}
 
               {gameWinner === playerSymbol && (
                 <div style={{ animation: 'pageFlipIn 0.5s ease forwards' }}>
-                  <button className="vintage-btn" onClick={() => setStage('memory')}>
-                    Open Memory Match
+                  <button className="vintage-btn" onClick={handleNextStep}>
+                    Continue
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
                   </button>
                 </div>
@@ -805,14 +1299,14 @@ export default function App() {
           </div>
         )}
 
-        {/* STAGE 5: MEMORY MATCH */}
-        {stage === 'memory' && (
+        {/* STEP TYPE: MEMORY */}
+        {currentStep.type === 'memory' && (
           <div className="stage-panel">
             <div className="game-card paper-vintage" style={{ maxWidth: '500px' }}>
               <div className="paper-vintage-bg"></div>
-              <span className="eyebrow" style={{ color: '#7A0923' }}>chapter five</span>
-              <h3>Memory Match</h3>
-              <p style={{ marginBottom: '1.5rem' }}>Match all 8 pairs of cards to unlock the final confession.</p>
+              {currentStep.eyebrow && <span className="eyebrow" style={{ color: '#7A0923' }}>{currentStep.eyebrow}</span>}
+              <h3>{currentStep.title}</h3>
+              <p style={{ marginBottom: '1.5rem' }}>{currentStep.instruction}</p>
 
               <div className="memory-grid">
                 {memoryCards.map((card, idx) => {
@@ -836,16 +1330,16 @@ export default function App() {
               </div>
 
               <div className="game-status">
-                {matchedPairsCount === symbols.length 
-                  ? "Pairs matched! The final door is open." 
-                  : `Pairs matched: ${matchedPairsCount} / ${symbols.length}`
+                {matchedPairsCount === (currentStep.symbols?.length || 8) 
+                  ? "Pairs matched! Continue to the next stage." 
+                  : `Pairs matched: ${matchedPairsCount} / ${currentStep.symbols?.length || 8}`
                 }
               </div>
 
-              {matchedPairsCount === symbols.length && (
+              {matchedPairsCount === (currentStep.symbols?.length || 8) && (
                 <div style={{ animation: 'pageFlipIn 0.5s ease forwards' }}>
-                  <button className="vintage-btn" onClick={() => setStage('confession')}>
-                    Read Confession
+                  <button className="vintage-btn" onClick={handleNextStep}>
+                    Continue
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
                   </button>
                 </div>
@@ -854,19 +1348,19 @@ export default function App() {
           </div>
         )}
 
-        {/* STAGE 6: CONFESSION */}
-        {stage === 'confession' && (
+        {/* STEP TYPE: CONFESSION */}
+        {currentStep.type === 'confession' && (
           <div className="stage-panel">
             {/* Reasons Grid */}
             <section style={{ marginBottom: '4rem' }}>
               <div className="section-inner">
-                <span className="eyebrow">chapter six</span>
+                {currentStep.eyebrow && <span className="eyebrow">{currentStep.eyebrow}</span>}
                 <div className="heart-divider">
                   <svg viewBox="0 0 32 29"><path d="M23.6 0c-3 0-5.7 1.7-7.6 4.4C14.1 1.7 11.4 0 8.4 0 3.8 0 0 3.9 0 8.8c0 8.4 8.6 13 15.4 19.6.3.3.9.3 1.2 0C23.4 21.8 32 17.2 32 8.8 32 3.9 28.2 0 23.6 0z"/></svg>
                 </div>
-                <h2 className="section-title">Reasons, in no particular order</h2>
+                <h2 className="section-title">{currentStep.title}</h2>
                 <div className="reasons-grid" id="reasonsGrid">
-                  {reasons.map((r, i) => (
+                  {(currentStep.reasons || []).map((r, i) => (
                     <div 
                       key={i} 
                       className="flip-card reveal"
@@ -887,43 +1381,61 @@ export default function App() {
             </section>
 
             {/* Gallery */}
-            <section style={{ marginBottom: '4rem' }}>
-              <div className="section-inner" style={{ maxWidth: '1000px' }}>
-                <span className="eyebrow">chapter seven</span>
-                <div className="heart-divider">
-                  <svg viewBox="0 0 32 29"><path d="M23.6 0c-3 0-5.7 1.7-7.6 4.4C14.1 1.7 11.4 0 8.4 0 3.8 0 0 3.9 0 8.8c0 8.4 8.6 13 15.4 19.6.3.3.9.3 1.2 0C23.4 21.8 32 17.2 32 8.8 32 3.9 28.2 0 23.6 0z"/></svg>
+            {(currentStep.polaroids || []).length > 0 && (
+              <section style={{ marginBottom: '4rem' }}>
+                <div className="section-inner" style={{ maxWidth: '1000px' }}>
+                  <span className="eyebrow">snapshots</span>
+                  <div className="heart-divider">
+                    <svg viewBox="0 0 32 29"><path d="M23.6 0c-3 0-5.7 1.7-7.6 4.4C14.1 1.7 11.4 0 8.4 0 3.8 0 0 3.9 0 8.8c0 8.4 8.6 13 15.4 19.6.3.3.9.3 1.2 0C23.4 21.8 32 17.2 32 8.8 32 3.9 28.2 0 23.6 0z"/></svg>
+                  </div>
+                  <h2 className="section-title">Some of my favorite moments</h2>
+                  <div className="gallery">
+                    {(currentStep.polaroids || []).map((p, i) => (
+                      <div 
+                        key={i} 
+                        className="polaroid paper-vintage reveal" 
+                        style={{ transform: `rotate(${p.rot}deg)` }}
+                      >
+                        <div className="paper-vintage-bg"></div>
+                        <div className="polaroid-img">[ your photo here ]</div>
+                        <div className="polaroid-cap">{p.cap}</div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-                <h2 className="section-title">Some of my favorite moments</h2>
-                <div className="gallery">
-                  {polaroids.map((p, i) => (
-                    <div 
-                      key={i} 
-                      className="polaroid paper-vintage reveal" 
-                      style={{ transform: `rotate(${p.rot}deg)` }}
-                    >
-                      <div className="paper-vintage-bg"></div>
-                      <div className="polaroid-img">[ your photo here ]</div>
-                      <div className="polaroid-cap">{p.cap}</div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </section>
+              </section>
+            )}
 
             {/* Final Letter */}
             <div className="closing-card paper-vintage">
               <div className="paper-vintage-bg"></div>
-              <h2>So here's the truth: every version of my future has you in it.</h2>
-              <div className="sig">— always, [Your Name]</div>
+              <h2>{currentStep.closingLetter}</h2>
+              <div className="sig">{currentStep.closingSig}</div>
               <button className="one-more" onClick={handleConfetti} id="oneMoreBtn">{sigText}</button>
             </div>
+          </div>
+        )}
+
+        {/* Navigation buttons at the bottom if not inside envelope */}
+        {currentStep.type !== 'envelope' && (
+          <div style={{ display: 'flex', gap: '1rem', marginTop: '2rem', justifyContent: 'center', zIndex: 10, position: 'relative' }}>
+            <button className="vintage-btn" style={{ background: 'transparent', border: '1px solid rgba(236,198,149,0.3)', color: 'var(--champagne)' }} onClick={handlePrevStep}>
+              ← Back
+            </button>
+            {currentStep.type !== 'quiz' && currentStep.type !== 'tictactoe' && currentStep.type !== 'memory' && currentStep.type !== 'timeline' && currentStepIndex < flowConfig.length - 1 && (
+              <button className="vintage-btn" onClick={handleNextStep}>
+                Skip / Next →
+              </button>
+            )}
           </div>
         )}
 
       </div>
 
       {/* Footer */}
-      <footer>made with more care than code, for [Her Name] · [Year]</footer>
+      {currentStep.type === 'confession' && (
+        <footer>made with more care than code, for {currentStep.recipientName} · {currentStep.footerYear}</footer>
+      )}
     </>
   );
 }
