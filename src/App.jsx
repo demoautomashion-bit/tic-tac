@@ -2,7 +2,6 @@ import { useEffect, useState, useRef } from 'react';
 import confetti from 'canvas-confetti';
 
 export default function App() {
-  const [veilHidden, setVeilHidden] = useState(false);
   const [stage, setStage] = useState('envelope'); // 'envelope', 'quiz1', 'timeline', 'quiz2', 'tictactoe', 'memory', 'confession'
   
   // Envelope opening state classes ('', 'open-step1', 'open-step1 open-step2', 'open-step1 open-step2 open-step3')
@@ -63,19 +62,25 @@ export default function App() {
     correctIndex: 1
   };
 
-  // 1. Veil fadeout on load
-  useEffect(() => {
-    const timer = setTimeout(() => setVeilHidden(true), 500);
-    return () => clearTimeout(timer);
-  }, []);
+  // Helper for safe matchMedia checks
+  const getReduceMotion = () => {
+    return typeof window !== 'undefined' && window.matchMedia 
+      ? window.matchMedia('(prefers-reduced-motion: reduce)').matches 
+      : false;
+  };
 
-  // 2. Interactive Canvas Fireflies Background
+  const getFinePointer = () => {
+    return typeof window !== 'undefined' && window.matchMedia 
+      ? window.matchMedia('(pointer: fine)').matches 
+      : true;
+  };
+
+  // 1. Interactive Canvas Fireflies Background
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
-    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if (reduceMotion) return;
+    if (getReduceMotion()) return;
 
     let width = canvas.width = window.innerWidth;
     let height = canvas.height = window.innerHeight;
@@ -141,9 +146,9 @@ export default function App() {
 
         ctx.beginPath();
         ctx.arc(f.x, f.y, f.size, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(230, 197, 148, ${f.opacity * (0.6 + Math.sin(f.angle * 2) * 0.4)})`;
+        ctx.fillStyle = `rgba(236, 198, 149, ${f.opacity * (0.6 + Math.sin(f.angle * 2) * 0.4)})`;
         ctx.shadowBlur = f.size * 2.5;
-        ctx.shadowColor = 'rgba(230, 197, 148, 0.7)';
+        ctx.shadowColor = 'rgba(236, 198, 149, 0.7)';
         ctx.fill();
       }
       animId = requestAnimationFrame(animate);
@@ -159,11 +164,9 @@ export default function App() {
     };
   }, []);
 
-  // 3. Cursor Heart Trail (fine pointers only, respects reduced motion)
+  // 2. Cursor Heart Trail (fine pointers only, respects reduced motion)
   useEffect(() => {
-    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const finePointer = window.matchMedia('(pointer: fine)').matches;
-    if (reduceMotion || !finePointer) return;
+    if (getReduceMotion() || !getFinePointer()) return;
 
     let lastSpawn = 0;
     const handleMouseMove = (e) => {
@@ -190,7 +193,7 @@ export default function App() {
     return () => window.removeEventListener('mousemove', handleMouseMove);
   }, []);
 
-  // 4. Scroll Reveal trigger inside stages
+  // 3. Scroll Reveal trigger inside stages
   useEffect(() => {
     const revealEls = document.querySelectorAll('.reveal');
     const io = new IntersectionObserver((entries) => {
@@ -203,7 +206,7 @@ export default function App() {
     return () => revealEls.forEach(el => io.unobserve(el));
   }, [stage]);
 
-  // 5. Timeline Line & Item Reveal
+  // 4. Timeline Line & Item Reveal
   useEffect(() => {
     if (stage !== 'timeline') return;
     const timelineLine = document.getElementById('timelineLine');
@@ -232,11 +235,10 @@ export default function App() {
     };
   }, [stage]);
 
-  // 6. Reasons 3D Hover-Tilt Effect
+  // 5. Reasons 3D Hover-Tilt Effect
   useEffect(() => {
     if (stage !== 'confession') return;
-    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if (reduceMotion) return;
+    if (getReduceMotion()) return;
 
     const cards = document.querySelectorAll('.flip-card');
     const handleMove = (e, card) => {
@@ -269,7 +271,7 @@ export default function App() {
         if (card._leaveListener) card.removeEventListener('mouseleave', card._leaveListener);
       });
     };
-  }, [stage, flippedCards]);
+  }, [stage]);
 
   // ---------- ENVELOPE MULTI-PHASE TRANSITION ----------
   const handleOpenEnvelope = () => {
@@ -465,10 +467,7 @@ export default function App() {
   const symbols = ['❤️', '🌸', '🎁', '✈️', '🍿', '🧸', '🍕', '☕'];
 
   const initMemoryGame = () => {
-    // Duplicate symbols to create 8 matching pairs
     const doubleSymbols = [...symbols, ...symbols];
-    
-    // Shuffle symbols
     const shuffled = doubleSymbols
       .map((sym, idx) => ({ id: idx, symbol: sym, isFlipped: false, isMatched: false }))
       .sort(() => Math.random() - 0.5);
@@ -478,7 +477,6 @@ export default function App() {
     setMatchedPairsCount(0);
   };
 
-  // Initialize Memory game when entering state
   useEffect(() => {
     if (stage === 'memory') {
       initMemoryGame();
@@ -492,7 +490,6 @@ export default function App() {
       selectedMemoryIndices.length >= 2
     ) return;
 
-    // Flip current card
     const updatedCards = [...memoryCards];
     updatedCards[idx].isFlipped = true;
     setMemoryCards(updatedCards);
@@ -503,7 +500,6 @@ export default function App() {
     if (newSelections.length === 2) {
       const [firstIdx, secondIdx] = newSelections;
       if (memoryCards[firstIdx].symbol === memoryCards[secondIdx].symbol) {
-        // MATCH FOUND
         setTimeout(() => {
           const matchedCards = [...memoryCards];
           matchedCards[firstIdx].isMatched = true;
@@ -513,7 +509,6 @@ export default function App() {
           setMatchedPairsCount(prev => {
             const nextCount = prev + 1;
             if (nextCount === symbols.length) {
-              // ALL MATCHED
               confetti({
                 particleCount: 65,
                 spread: 70,
@@ -524,7 +519,6 @@ export default function App() {
           });
         }, 400);
       } else {
-        // MISMATCH
         setTimeout(() => {
           const resetCards = [...memoryCards];
           resetCards[firstIdx].isFlipped = false;
@@ -584,11 +578,6 @@ export default function App() {
     <>
       {/* 1. Fireflies Canvas Background */}
       <canvas ref={canvasRef} style={{ position: 'fixed', inset: 0, zIndex: -1, pointerEvents: 'none' }} />
-
-      {/* 2. Veil Preloader */}
-      <div className={`veil ${veilHidden ? 'hide' : ''}`} id="veil">
-        <span className="veil-text">for you...</span>
-      </div>
 
       {/* STAGE CONTAINER SHELL */}
       <div className="stage-container">

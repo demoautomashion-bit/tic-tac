@@ -103,15 +103,6 @@ h1,h2,h3{ font-family: var(--serif); font-weight: 500; line-height: 1.15; }
   60%{ transform:scale(1); }
 }
 
-/* PRELOADER VEIL FIX: Unmounts cleanly with display:none */
-.veil{
-  position: fixed; inset:0; background: var(--bg-dark-1); z-index: 500;
-  display:flex; align-items:center; justify-content:center;
-  transition: opacity 0.9s ease, visibility 0.9s ease;
-}
-.veil.hide{ opacity:0; visibility:hidden; pointer-events:none; display: none !important; }
-.veil-text{ font-family: var(--script); font-size: 2.8rem; color: var(--champagne); opacity:0.85; }
-
 /* ---------- STAGE CONTAINERS & TRANSITIONS ---------- */
 .stage-container {
   min-height: 85svh;
