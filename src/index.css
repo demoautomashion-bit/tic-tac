@@ -32,17 +32,19 @@ body{
 
 h1,h2,h3{ font-family: var(--serif); font-weight: 500; line-height: 1.15; }
 
-/* ---------- PARCHMENT / VINTAGE PAPER STYLE (100% Pure CSS) ---------- */
+/* ---------- PARCHMENT / VINTAGE PAPER STYLE (100% Pure CSS + Texture Blend) ---------- */
 .paper-vintage {
   position: relative;
   color: var(--ink);
-  background: var(--parchment);
+  background-color: var(--parchment);
   background-image: 
-    radial-gradient(circle at 50% 50%, transparent 50%, rgba(139, 90, 43, 0.14)), 
-    radial-gradient(circle at 15% 25%, rgba(139, 90, 43, 0.08) 0%, transparent 40%),
-    radial-gradient(circle at 85% 75%, rgba(139, 90, 43, 0.08) 0%, transparent 40%);
+    linear-gradient(rgba(242, 235, 217, 0.86), rgba(223, 211, 182, 0.86)),
+    url('/crumpled-paper.png');
+  background-blend-mode: multiply;
+  background-size: cover;
+  background-position: center;
   box-shadow: 
-    inset 0 0 35px rgba(139, 90, 43, 0.2), 
+    inset 0 0 35px rgba(139, 90, 43, 0.18), 
     0 15px 35px rgba(0, 0, 0, 0.55);
   border: 1px solid rgba(139, 90, 43, 0.22);
   border-radius: 12px;
@@ -199,10 +201,13 @@ h1,h2,h3{ font-family: var(--serif); font-weight: 500; line-height: 1.15; }
 
 .env-body{
   position:absolute; inset:0;
-  background: linear-gradient(155deg, var(--parchment), var(--parchment-stain));
+  background-color: var(--parchment);
   background-image: 
-    radial-gradient(circle at 50% 50%, transparent 50%, rgba(139, 90, 43, 0.14)), 
-    radial-gradient(circle at 15% 25%, rgba(139, 90, 43, 0.08) 0%, transparent 40%);
+    linear-gradient(rgba(242, 235, 217, 0.86), rgba(223, 211, 182, 0.86)),
+    url('/crumpled-paper.png');
+  background-blend-mode: multiply;
+  background-size: cover;
+  background-position: center;
   border-radius: 6px;
   box-shadow: 0 20px 45px rgba(0,0,0,0.65);
   border: 1px solid rgba(139, 90, 43, 0.22);
@@ -238,9 +243,13 @@ h1,h2,h3{ font-family: var(--serif); font-weight: 500; line-height: 1.15; }
 .env-letter{
   position:absolute; left:8%; right:8%; top:10%;
   height: 82%;
-  background: var(--parchment);
+  background-color: var(--parchment);
   background-image: 
-    radial-gradient(circle at 50% 50%, transparent 50%, rgba(139, 90, 43, 0.14));
+    linear-gradient(rgba(242, 235, 217, 0.9), rgba(230, 220, 195, 0.9)),
+    url('/crumpled-paper.png');
+  background-blend-mode: multiply;
+  background-size: cover;
+  background-position: center;
   border: 1px solid rgba(139, 90, 43, 0.2);
   border-radius: 4px;
   transform: translateY(6%) scale(0.94);
