@@ -3,14 +3,43 @@ import confetti from 'canvas-confetti';
 
 export default function App() {
   const [veilHidden, setVeilHidden] = useState(false);
-  const [opened, setOpened] = useState(false);
+  const [stage, setStage] = useState('envelope'); // 'envelope', 'timeline', 'quiz', 'tictactoe', 'reasons', 'confession'
+  
+  // Envelope opening state (transition helper)
+  const [envOpened, setEnvOpened] = useState(false);
+
+  // Quiz States
+  const [selectedQuizOpt, setSelectedQuizOpt] = useState(null);
+  const [quizStatus, setQuizStatus] = useState('idle'); // 'idle', 'correct', 'incorrect'
+  const [shakeQuizCard, setShakeQuizCard] = useState(false);
+
+  // Tic-Tac-Toe States
+  const [board, setBoard] = useState(Array(9).fill(null));
+  const [playerSymbol] = useState('❤️');
+  const [aiSymbol] = useState('⭕');
+  const [isPlayerTurn, setIsPlayerTurn] = useState(true);
+  const [gameWinner, setGameWinner] = useState(null); // '❤️', '⭕', 'Draw', null
+  const [gameStatus, setGameStatus] = useState('Your turn! Tap a cell to place your heart.');
+
+  // Reasons / Gallery Flipped State
   const [flippedCards, setFlippedCards] = useState({});
   const [sigText, setSigText] = useState('one more thing');
-  
-  const envSceneRef = useRef(null);
+
   const canvasRef = useRef(null);
 
-  // 1. Veil Fadeout on mount
+  // Quiz Configurations
+  const quizData = {
+    question: "Where did we first cross paths?",
+    options: [
+      "The cozy local coffee shop",
+      "Under the roof of the library study room",
+      "Waiting at that rainy bus stop",
+      "A mutual friend's birthday gathering"
+    ],
+    correctIndex: 2 // Option index 2 is correct
+  };
+
+  // 1. Veil preloader fadeout
   useEffect(() => {
     const timer = setTimeout(() => setVeilHidden(true), 500);
     return () => clearTimeout(timer);
@@ -106,7 +135,7 @@ export default function App() {
     };
   }, []);
 
-  // 3. Cursor Heart Trail (respects reduced motion & mouse fine pointers)
+  // 3. Cursor Heart Trail (respects reduced motion & fine pointer only)
   useEffect(() => {
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const finePointer = window.matchMedia('(pointer: fine)').matches;
@@ -137,21 +166,22 @@ export default function App() {
     return () => window.removeEventListener('mousemove', handleMouseMove);
   }, []);
 
-  // 4. Scroll Reveal via IntersectionObserver
+  // 4. Scroll Reveal trigger inside stages
   useEffect(() => {
     const revealEls = document.querySelectorAll('.reveal');
     const io = new IntersectionObserver((entries) => {
       entries.forEach(e => {
         if (e.isIntersecting) e.target.classList.add('in');
       });
-    }, { threshold: 0.15 });
+    }, { threshold: 0.1 });
 
     revealEls.forEach(el => io.observe(el));
     return () => revealEls.forEach(el => io.unobserve(el));
-  }, []);
+  }, [stage]);
 
-  // 5. Timeline Line & Item Reveal
+  // 5. Timeline Line Growth & Item Observability
   useEffect(() => {
+    if (stage !== 'timeline') return;
     const timelineLine = document.getElementById('timelineLine');
     const timelineSection = document.querySelector('.timeline');
     
@@ -168,7 +198,7 @@ export default function App() {
       entries.forEach(e => {
         if (e.isIntersecting) e.target.classList.add('in');
       });
-    }, { threshold: 0.25 });
+    }, { threshold: 0.2 });
 
     items.forEach(item => ioItem.observe(item));
 
@@ -176,10 +206,11 @@ export default function App() {
       if (timelineSection) ioLine.unobserve(timelineSection);
       items.forEach(item => ioItem.unobserve(item));
     };
-  }, []);
+  }, [stage]);
 
-  // 6. Reasons 3D Tilt Effect
+  // 6. Reasons Grid 3D Card Hover-Tilt Effect
   useEffect(() => {
+    if (stage !== 'reasons') return;
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     if (reduceMotion) return;
 
@@ -210,19 +241,156 @@ export default function App() {
 
     return () => {
       cards.forEach(card => {
-        card.removeEventListener('mousemove', card._moveListener);
-        card.removeEventListener('mouseleave', card._leaveListener);
+        if (card._moveListener) card.removeEventListener('mousemove', card._moveListener);
+        if (card._leaveListener) card.removeEventListener('mouseleave', card._leaveListener);
       });
     };
-  }, [flippedCards]);
+  }, [stage, flippedCards]);
 
-  const toggleCard = (index) => {
-    setFlippedCards(prev => ({
-      ...prev,
-      [index]: !prev[index]
-    }));
+  // ---------- ENVELOPE OPENING ----------
+  const handleOpenEnvelope = () => {
+    setEnvOpened(true);
+    setTimeout(() => {
+      setStage('timeline');
+    }, 1400); // Wait for open slide animation to complete
   };
 
+  // ---------- QUIZ EVENT HANDLERS ----------
+  const handleQuizSelection = (index) => {
+    if (quizStatus === 'correct') return;
+    setSelectedQuizOpt(index);
+
+    if (index === quizData.correctIndex) {
+      setQuizStatus('correct');
+      // Spark confetti for correct answer
+      confetti({
+        particleCount: 45,
+        spread: 50,
+        origin: { y: 0.8 }
+      });
+    } else {
+      setQuizStatus('incorrect');
+      setShakeQuizCard(true);
+      setTimeout(() => {
+        setShakeQuizCard(false);
+        setSelectedQuizOpt(null);
+        setQuizStatus('idle');
+      }, 500);
+    }
+  };
+
+  // ---------- TIC-TAC-TOE AI LOGIC & WIN CONDITIONS ----------
+  const winCombos = [
+    [0, 1, 2], [3, 4, 5], [6, 7, 8], // Rows
+    [0, 3, 6], [1, 4, 7], [2, 5, 8], // Cols
+    [0, 4, 8], [2, 4, 6]             // Diagonals
+  ];
+
+  const checkWinner = (tempBoard) => {
+    for (let combo of winCombos) {
+      const [a, b, c] = combo;
+      if (tempBoard[a] && tempBoard[a] === tempBoard[b] && tempBoard[a] === tempBoard[c]) {
+        return tempBoard[a];
+      }
+    }
+    if (tempBoard.every(cell => cell !== null)) return 'Draw';
+    return null;
+  };
+
+  const handleCellClick = (index) => {
+    if (board[index] || gameWinner || !isPlayerTurn) return;
+
+    const newBoard = [...board];
+    newBoard[index] = playerSymbol;
+    setBoard(newBoard);
+
+    const winner = checkWinner(newBoard);
+    if (winner) {
+      handleGameOver(winner);
+    } else {
+      setIsPlayerTurn(false);
+      setGameStatus("Computer is choosing...");
+    }
+  };
+
+  // AI Opponent Move
+  useEffect(() => {
+    if (isPlayerTurn || gameWinner || stage !== 'tictactoe') return;
+
+    const aiTimer = setTimeout(() => {
+      const emptyCells = board.map((cell, idx) => cell === null ? idx : null).filter(val => val !== null);
+      if (emptyCells.length === 0) return;
+
+      let aiMove = null;
+
+      // 1. Try to win in next move
+      for (let cell of emptyCells) {
+        const boardCopy = [...board];
+        boardCopy[cell] = aiSymbol;
+        if (checkWinner(boardCopy) === aiSymbol) {
+          aiMove = cell;
+          break;
+        }
+      }
+
+      // 2. Block player from winning in next move
+      if (aiMove === null) {
+        for (let cell of emptyCells) {
+          const boardCopy = [...board];
+          boardCopy[cell] = playerSymbol;
+          if (checkWinner(boardCopy) === playerSymbol) {
+            aiMove = cell;
+            break;
+          }
+        }
+      }
+
+      // 3. Fallback to random move
+      if (aiMove === null) {
+        const randomIndex = Math.floor(Math.random() * emptyCells.length);
+        aiMove = emptyCells[randomIndex];
+      }
+
+      const newBoard = [...board];
+      newBoard[aiMove] = aiSymbol;
+      setBoard(newBoard);
+
+      const winner = checkWinner(newBoard);
+      if (winner) {
+        handleGameOver(winner);
+      } else {
+        setIsPlayerTurn(true);
+        setGameStatus("Your turn! Place your heart.");
+      }
+    }, 600);
+
+    return () => clearTimeout(aiTimer);
+  }, [isPlayerTurn, board, gameWinner, stage]);
+
+  const handleGameOver = (winner) => {
+    setGameWinner(winner);
+    if (winner === playerSymbol) {
+      setGameStatus("You win! ❤️ You've unlocked the reasons.");
+      confetti({
+        particleCount: 50,
+        spread: 60,
+        colors: ['#D4A59A', '#E6C594']
+      });
+    } else if (winner === aiSymbol) {
+      setGameStatus("Looks like I won this round! Let's try again.");
+    } else {
+      setGameStatus("It's a draw! Let's play one more time.");
+    }
+  };
+
+  const resetGame = () => {
+    setBoard(Array(9).fill(null));
+    setGameWinner(null);
+    setIsPlayerTurn(true);
+    setGameStatus("Your turn! Place your heart.");
+  };
+
+  // ---------- FINAL CONFETTI ----------
   const handleConfetti = () => {
     confetti({
       particleCount: 95,
@@ -233,6 +401,14 @@ export default function App() {
     });
     setSigText('I mean it.');
   };
+
+  // Timeline chapters
+  const timelineData = [
+    { title: "The day we met", date: "[Month, Year]", body: "[Placeholder — describe how you first crossed paths. Where were you, what did she say, what did you notice first?]" },
+    { title: "Our first date", date: "[Month, Year]", body: "[Placeholder — where you went, the thing that made you both laugh, the moment you knew you wanted a second one.]" },
+    { title: "The trip that changed things", date: "[Month, Year]", body: "[Placeholder — a trip, a late night, a hard time you got through together. Whatever made it feel real.]" },
+    { title: "Still here, still us", date: "Today", body: "[Placeholder — a line about where you are now, and why you're still choosing each other.]" }
+  ];
 
   // Reasons list data
   const reasons = [
@@ -246,7 +422,7 @@ export default function App() {
     "Just... you. All of it. Even the mornings."
   ];
 
-  // Polaroid gallery photo data
+  // Polaroid moments
   const polaroids = [
     { cap: "that one weekend", rot: -2 },
     { cap: "the road trip", rot: 3 },
@@ -266,153 +442,251 @@ export default function App() {
         <span className="veil-text">for you...</span>
       </div>
 
-      {/* 3. Hero / Envelope Section */}
-      <section className="hero">
-        <div className="envelope-wrap">
-          <div className={`envelope-scene ${opened ? 'open' : ''}`} ref={envSceneRef} id="envScene">
-            <div className="env-shadow"></div>
-            <button className="envelope" onClick={() => setOpened(true)} id="envBtn" aria-label="Open the letter">
-              <div className="env-body"></div>
-              <div className="env-letter paper-vintage">
-                <p>...I've been meaning to tell you something...</p>
-              </div>
-              <div className="env-flap"></div>
-              <div className="env-seal">
-                <svg viewBox="0 0 32 29">
-                  <path d="M23.6 0c-3 0-5.7 1.7-7.6 4.4C14.1 1.7 11.4 0 8.4 0 3.8 0 0 3.9 0 8.8c0 8.4 8.6 13 15.4 19.6.3.3.9.3 1.2 0C23.4 21.8 32 17.2 32 8.8 32 3.9 28.2 0 23.6 0z"/>
-                </svg>
-              </div>
-              <div className="env-label">For [Her Name]</div>
-            </button>
-          </div>
-          <span className={`tap-prompt ${opened ? 'gone' : ''}`} id="tapPrompt">tap to open</span>
-        </div>
-        <div className={`scrolldown ${opened ? 'show' : ''}`} id="scrollDown">
-          <span>keep going</span>
-          <span className="line"></span>
-        </div>
-      </section>
-
-      {/* 4. Opening Letter Section */}
-      <section id="letterSection">
-        <div className="section-inner reveal" id="letterCard">
-          <div className="letter-card paper-vintage">
-            <p>I've been trying to find the right way to tell you this, so I built you something instead.</p>
-            <p>This isn't a card you'll lose in a drawer, or a text that gets buried under everything else. It's just... us, written down. The parts I don't say enough out loud.</p>
-            <p>So take your time. Scroll slowly. This one's just for you.</p>
-            <div className="signoff">— [Your Name]</div>
-          </div>
-        </div>
-      </section>
-
-      {/* 5. Chapter 1: Timeline Section */}
-      <section>
-        <div className="section-inner">
-          <span className="eyebrow reveal">chapter one</span>
-          <div className="heart-divider reveal">
-            <svg viewBox="0 0 32 29"><path d="M23.6 0c-3 0-5.7 1.7-7.6 4.4C14.1 1.7 11.4 0 8.4 0 3.8 0 0 3.9 0 8.8c0 8.4 8.6 13 15.4 19.6.3.3.9.3 1.2 0C23.4 21.8 32 17.2 32 8.8 32 3.9 28.2 0 23.6 0z"/></svg>
-          </div>
-          <h2 className="section-title reveal">How we found each other</h2>
-          <div className="timeline">
-            <div className="timeline-line" id="timelineLine"></div>
-
-            <div className="t-item">
-              <div className="t-card paper-vintage">
-                <div className="t-dot"></div>
-                <span className="t-date">[Month, Year]</span>
-                <h3 className="t-title">The day we met</h3>
-                <p>[Placeholder — describe how you first crossed paths. Where were you, what did she say, what did you notice first?]</p>
-              </div>
-            </div>
-
-            <div className="t-item">
-              <div className="t-card paper-vintage">
-                <div className="t-dot"></div>
-                <span className="t-date">[Month, Year]</span>
-                <h3 className="t-title">Our first date</h3>
-                <p>[Placeholder — where you went, the thing that made you both laugh, the moment you knew you wanted a second one.]</p>
-              </div>
-            </div>
-
-            <div className="t-item">
-              <div className="t-card paper-vintage">
-                <div className="t-dot"></div>
-                <span className="t-date">[Month, Year]</span>
-                <h3 className="t-title">The trip that changed things</h3>
-                <p>[Placeholder — a trip, a late night, a hard time you got through together. Whatever made it feel real.]</p>
-              </div>
-            </div>
-
-            <div className="t-item">
-              <div className="t-card paper-vintage">
-                <div className="t-dot"></div>
-                <span className="t-date">Today</span>
-                <h3 className="t-title">Still here, still us</h3>
-                <p>[Placeholder — a line about where you are now, and why you're still choosing each other.]</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* 6. Chapter 2: Reasons Section */}
-      <section>
-        <div className="section-inner">
-          <span className="eyebrow reveal">chapter two</span>
-          <div className="heart-divider reveal">
-            <svg viewBox="0 0 32 29"><path d="M23.6 0c-3 0-5.7 1.7-7.6 4.4C14.1 1.7 11.4 0 8.4 0 3.8 0 0 3.9 0 8.8c0 8.4 8.6 13 15.4 19.6.3.3.9.3 1.2 0C23.4 21.8 32 17.2 32 8.8 32 3.9 28.2 0 23.6 0z"/></svg>
-          </div>
-          <h2 className="section-title reveal">Reasons, in no particular order</h2>
-          <div className="reasons-grid" id="reasonsGrid">
-            {reasons.map((r, i) => (
-              <div 
-                key={i} 
-                className={`flip-card reveal ${flippedCards[i] ? 'flipped' : ''}`}
-                onClick={() => toggleCard(i)}
-              >
-                <div className="flip-inner">
-                  <div className="flip-face flip-front">
-                    <span className="num">{(i + 1).toString().padStart(2, '0')}</span>
+      {/* STAGE CONTAINER SHELL */}
+      <div className="stage-container">
+        
+        {/* STAGE 0: ENVELOPE */}
+        {stage === 'envelope' && (
+          <div className="stage-panel" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+            <div className="envelope-wrap">
+              <div className={`envelope-scene ${envOpened ? 'open' : ''}`} id="envScene">
+                <div className="env-shadow"></div>
+                <button className="envelope" onClick={handleOpenEnvelope} id="envBtn" aria-label="Open the letter">
+                  <div className="env-body">
+                    <div className="paper-vintage-bg"></div>
                   </div>
-                  <div className="flip-face flip-back paper-vintage">
-                    <p>{r}</p>
+                  <div className="env-letter paper-vintage">
+                    <div className="paper-vintage-bg"></div>
+                    <p>...I've been meaning to tell you something...</p>
                   </div>
+                  <div className="env-flap"></div>
+                  <div className="env-seal">
+                    <svg viewBox="0 0 32 29">
+                      <path d="M23.6 0c-3 0-5.7 1.7-7.6 4.4C14.1 1.7 11.4 0 8.4 0 3.8 0 0 3.9 0 8.8c0 8.4 8.6 13 15.4 19.6.3.3.9.3 1.2 0C23.4 21.8 32 17.2 32 8.8 32 3.9 28.2 0 23.6 0z"/>
+                    </svg>
+                  </div>
+                  <div className="env-label">For [Her Name]</div>
+                </button>
+              </div>
+              <span className={`tap-prompt ${envOpened ? 'gone' : ''}`} id="tapPrompt">tap to open</span>
+            </div>
+          </div>
+        )}
+
+        {/* STAGE 1: TIMELINE */}
+        {stage === 'timeline' && (
+          <div className="stage-panel">
+            {/* Opening greeting */}
+            <section style={{ marginBottom: '4rem' }}>
+              <div className="section-inner">
+                <div className="letter-card paper-vintage">
+                  <div className="paper-vintage-bg"></div>
+                  <p>I've been trying to find the right way to tell you this, so I built you something instead.</p>
+                  <p>This isn't a card you'll lose in a drawer, or a text that gets buried under everything else. It's just... us, written down. The parts I don't say enough out loud.</p>
+                  <p>So take your time. This journey is just for you.</p>
+                  <div className="signoff">— [Your Name]</div>
                 </div>
               </div>
-            ))}
-          </div>
-        </div>
-      </section>
+            </section>
 
-      {/* 7. Chapter 3: Gallery Section */}
-      <section>
-        <div className="section-inner" style={{ maxWidth: '1000px' }}>
-          <span className="eyebrow reveal">chapter three</span>
-          <div className="heart-divider reveal">
-            <svg viewBox="0 0 32 29"><path d="M23.6 0c-3 0-5.7 1.7-7.6 4.4C14.1 1.7 11.4 0 8.4 0 3.8 0 0 3.9 0 8.8c0 8.4 8.6 13 15.4 19.6.3.3.9.3 1.2 0C23.4 21.8 32 17.2 32 8.8 32 3.9 28.2 0 23.6 0z"/></svg>
-          </div>
-          <h2 className="section-title reveal">Some of my favorite moments</h2>
-          <div className="gallery" id="gallery">
-            {polaroids.map((p, i) => (
-              <div 
-                key={i} 
-                className="polaroid paper-vintage reveal" 
-                style={{ transform: `rotate(${p.rot}deg)` }}
-              >
-                <div className="polaroid-img">[ your photo here ]</div>
-                <div className="polaroid-cap">{p.cap}</div>
+            {/* Timeline */}
+            <section>
+              <div className="section-inner">
+                <span className="eyebrow">chapter one</span>
+                <div className="heart-divider">
+                  <svg viewBox="0 0 32 29"><path d="M23.6 0c-3 0-5.7 1.7-7.6 4.4C14.1 1.7 11.4 0 8.4 0 3.8 0 0 3.9 0 8.8c0 8.4 8.6 13 15.4 19.6.3.3.9.3 1.2 0C23.4 21.8 32 17.2 32 8.8 32 3.9 28.2 0 23.6 0z"/></svg>
+                </div>
+                <h2 className="section-title">How we found each other</h2>
+                <div className="timeline">
+                  <div className="timeline-line" id="timelineLine"></div>
+
+                  {timelineData.map((item, idx) => (
+                    <div className="t-item" key={idx}>
+                      <div className="t-card paper-vintage">
+                        <div className="paper-vintage-bg"></div>
+                        <div className="t-dot"></div>
+                        <span className="t-date">{item.date}</span>
+                        <h3 className="t-title">{item.title}</h3>
+                        <p>{item.body}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div style={{ textAlign: 'center', marginTop: '4rem' }}>
+                  <button className="vintage-btn" onClick={() => setStage('quiz')}>
+                    Continue to Trivia
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                  </button>
+                </div>
               </div>
-            ))}
+            </section>
           </div>
-        </div>
-      </section>
+        )}
 
-      {/* 8. Closing Section */}
-      <section className="closing">
-        <h2 className="reveal" id="closingText">So here's the truth: every version of my future has you in it.</h2>
-        <div className="sig reveal" id="closingSig">— always, [Your Name]</div>
-        <button className="one-more reveal" onClick={handleConfetti} id="oneMoreBtn">{sigText}</button>
-      </section>
+        {/* STAGE 2: TRIVIA QUIZ */}
+        {stage === 'quiz' && (
+          <div className={`stage-panel ${shakeQuizCard ? 'shake' : ''}`}>
+            <div className="quiz-card paper-vintage">
+              <div className="paper-vintage-bg"></div>
+              <span className="eyebrow" style={{ color: '#8A2D3C' }}>chapter two</span>
+              <h3>Memory Check</h3>
+              <p className="question">{quizData.question}</p>
+
+              <div className="quiz-options">
+                {quizData.options.map((option, idx) => {
+                  let optClass = '';
+                  if (selectedQuizOpt === idx) {
+                    optClass = quizStatus === 'correct' ? 'correct' : 'incorrect';
+                  }
+                  return (
+                    <button 
+                      key={idx}
+                      className={`quiz-option ${optClass}`}
+                      disabled={quizStatus === 'correct'}
+                      onClick={() => handleQuizSelection(idx)}
+                    >
+                      {option}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {quizStatus === 'correct' && (
+                <div style={{ marginTop: '2.5rem', animation: 'pageFlipIn 0.5s ease forwards' }}>
+                  <p style={{ fontFamily: 'var(--serif)', fontStyle: 'italic', marginBottom: '1.5rem', color: '#1b5e20' }}>
+                    Correct! You remember. Now, let's play a game...
+                  </p>
+                  <button className="vintage-btn" onClick={() => setStage('tictactoe')}>
+                    Play Tic-Tac-Toe
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* STAGE 3: TIC-TAC-TOE */}
+        {stage === 'tictactoe' && (
+          <div className="stage-panel">
+            <div className="game-card paper-vintage">
+              <div className="paper-vintage-bg"></div>
+              <span className="eyebrow" style={{ color: '#8A2D3C' }}>chapter three</span>
+              <h3>The Game of Hearts</h3>
+              <p>Win a round of Tic-Tac-Toe to unlock the final secrets.</p>
+
+              <div className="game-board">
+                {board.map((cell, idx) => (
+                  <div 
+                    key={idx} 
+                    className={`game-cell ${cell ? 'occupied' : ''}`}
+                    onClick={() => handleCellClick(idx)}
+                  >
+                    {cell}
+                  </div>
+                ))}
+              </div>
+
+              <div className="game-status">{gameStatus}</div>
+
+              {gameWinner && gameWinner !== playerSymbol && (
+                <button className="vintage-btn" onClick={resetGame} style={{ background: '#e0cfa5', marginRight: '10px' }}>
+                  Try Again
+                </button>
+              )}
+
+              {gameWinner === playerSymbol && (
+                <div style={{ animation: 'pageFlipIn 0.5s ease forwards' }}>
+                  <button className="vintage-btn" onClick={() => setStage('reasons')}>
+                    Reveal Reasons
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* STAGE 4: REASONS & GALLERY */}
+        {stage === 'reasons' && (
+          <div className="stage-panel">
+            {/* Reasons Grid */}
+            <section style={{ marginBottom: '4rem' }}>
+              <div className="section-inner">
+                <span className="eyebrow">chapter four</span>
+                <div className="heart-divider">
+                  <svg viewBox="0 0 32 29"><path d="M23.6 0c-3 0-5.7 1.7-7.6 4.4C14.1 1.7 11.4 0 8.4 0 3.8 0 0 3.9 0 8.8c0 8.4 8.6 13 15.4 19.6.3.3.9.3 1.2 0C23.4 21.8 32 17.2 32 8.8 32 3.9 28.2 0 23.6 0z"/></svg>
+                </div>
+                <h2 className="section-title">Reasons, in no particular order</h2>
+                <div className="reasons-grid" id="reasonsGrid">
+                  {reasons.map((r, i) => (
+                    <div 
+                      key={i} 
+                      className={`flip-card reveal ${flippedCards[i] ? 'flipped' : ''}`}
+                      onClick={() => toggleCard(i)}
+                    >
+                      <div className="flip-inner">
+                        <div className="flip-face flip-front">
+                          <span className="num">{(i + 1).toString().padStart(2, '0')}</span>
+                        </div>
+                        <div className="flip-face flip-back paper-vintage">
+                          <div className="paper-vintage-bg"></div>
+                          <p>{r}</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </section>
+
+            {/* Gallery */}
+            <section>
+              <div className="section-inner" style={{ maxWidth: '1000px' }}>
+                <span className="eyebrow">chapter five</span>
+                <div className="heart-divider">
+                  <svg viewBox="0 0 32 29"><path d="M23.6 0c-3 0-5.7 1.7-7.6 4.4C14.1 1.7 11.4 0 8.4 0 3.8 0 0 3.9 0 8.8c0 8.4 8.6 13 15.4 19.6.3.3.9.3 1.2 0C23.4 21.8 32 17.2 32 8.8 32 3.9 28.2 0 23.6 0z"/></svg>
+                </div>
+                <h2 className="section-title">Some of my favorite moments</h2>
+                <div className="gallery">
+                  {polaroids.map((p, i) => (
+                    <div 
+                      key={i} 
+                      className="polaroid paper-vintage reveal" 
+                      style={{ transform: `rotate(${p.rot}deg)` }}
+                    >
+                      <div className="paper-vintage-bg"></div>
+                      <div className="polaroid-img">[ your photo here ]</div>
+                      <div className="polaroid-cap">{p.cap}</div>
+                    </div>
+                  ))}
+                </div>
+
+                <div style={{ textAlign: 'center', marginTop: '5rem' }}>
+                  <button className="vintage-btn" onClick={() => setStage('confession')}>
+                    Final Letter
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                  </button>
+                </div>
+              </div>
+            </section>
+          </div>
+        )}
+
+        {/* STAGE 5: CONFESSION */}
+        {stage === 'confession' && (
+          <div className="stage-panel">
+            <div className="closing-card paper-vintage">
+              <div className="paper-vintage-bg"></div>
+              <h2>So here's the truth: every version of my future has you in it.</h2>
+              <div className="sig">— always, [Your Name]</div>
+              <button className="one-more" onClick={handleConfetti} id="oneMoreBtn">{sigText}</button>
+            </div>
+          </div>
+        )}
+
+      </div>
 
       {/* 9. Footer */}
       <footer>made with more care than code, for [Her Name] · [Year]</footer>
