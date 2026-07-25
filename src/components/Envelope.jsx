@@ -4,6 +4,7 @@ import { useState } from "react";
 
 export default function Envelope({ step, onComplete }) {
   const [envOpenClass, setEnvOpenClass] = useState("");
+  const [showContinue, setShowContinue] = useState(false);
 
   const handleOpenEnvelope = () => {
     if (envOpenClass !== "") return;
@@ -16,12 +17,13 @@ export default function Envelope({ step, onComplete }) {
 
     setTimeout(() => {
       setEnvOpenClass("open-step1 open-step2 open-step3");
+      setShowContinue(true);
     }, 2000);
+  };
 
-    setTimeout(() => {
-      onComplete();
-      setEnvOpenClass("");
-    }, 2900);
+  const handleContinue = (e) => {
+    e.stopPropagation();
+    onComplete();
   };
 
   return (
@@ -35,7 +37,14 @@ export default function Envelope({ step, onComplete }) {
             </div>
             <div className="env-letter paper-vintage">
               <div className="paper-vintage-bg"></div>
-              <p>{step.letter}</p>
+              <div className="env-letter-content">
+                <p>{step.letter}</p>
+                {showContinue && (
+                  <button className="vintage-btn env-continue-btn" onClick={handleContinue}>
+                    Continue &rarr;
+                  </button>
+                )}
+              </div>
             </div>
             <div className="env-front">
               <div className="paper-vintage-bg"></div>
