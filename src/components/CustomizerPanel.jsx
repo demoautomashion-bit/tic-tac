@@ -380,13 +380,33 @@ export default function CustomizerPanel({
                         />
                       </div>
                       <div className="custom-input-group">
-                        <label>Image URL (Optional)</label>
+                        <label>Puzzle Image (URL or Upload)</label>
                         <input 
                           type="text" 
                           value={step.imageUrl || ""} 
-                          placeholder="Leave blank for heart pattern"
+                          placeholder="Image URL or upload below..."
                           onChange={(e) => handleUpdateStepProperty(idx, "imageUrl", e.target.value)} 
                         />
+                        <div style={{ marginTop: "0.35rem" }}>
+                          <input 
+                            type="file" 
+                            accept="image/*" 
+                            id={`file-puzzle-${idx}`}
+                            style={{ display: "none" }}
+                            onChange={(e) => {
+                              if (e.target.files && e.target.files[0]) {
+                                const reader = new FileReader();
+                                reader.onload = (ev) => {
+                                  handleUpdateStepProperty(idx, "imageUrl", ev.target.result);
+                                };
+                                reader.readAsDataURL(e.target.files[0]);
+                              }
+                            }}
+                          />
+                          <label htmlFor={`file-puzzle-${idx}`} className="editor-btn-secondary" style={{ marginTop: 0, cursor: "pointer", display: "block" }}>
+                            📷 Upload Photo from Device
+                          </label>
+                        </div>
                       </div>
                     </>
                   )}
@@ -434,7 +454,7 @@ export default function CustomizerPanel({
                           <div key={pIdx} style={{ border: "1px solid rgba(255,255,255,0.1)", padding: "0.5rem", borderRadius: "4px", marginBottom: "0.5rem" }}>
                             <input 
                               type="text" 
-                              placeholder="Image URL (http...)"
+                              placeholder="Image URL or upload below..."
                               value={pol.url || ""} 
                               style={{ marginBottom: "0.25rem" }}
                               onChange={(e) => {
@@ -443,6 +463,28 @@ export default function CustomizerPanel({
                                 handleUpdateStepProperty(idx, "polaroids", nextPols);
                               }}
                             />
+                            <div style={{ marginBottom: "0.35rem" }}>
+                              <input 
+                                type="file" 
+                                accept="image/*" 
+                                id={`file-pol-${idx}-${pIdx}`}
+                                style={{ display: "none" }}
+                                onChange={(e) => {
+                                  if (e.target.files && e.target.files[0]) {
+                                    const reader = new FileReader();
+                                    reader.onload = (ev) => {
+                                      const nextPols = [...step.polaroids];
+                                      nextPols[pIdx] = { ...nextPols[pIdx], url: ev.target.result };
+                                      handleUpdateStepProperty(idx, "polaroids", nextPols);
+                                    };
+                                    reader.readAsDataURL(e.target.files[0]);
+                                  }
+                                }}
+                              />
+                              <label htmlFor={`file-pol-${idx}-${pIdx}`} className="editor-btn-secondary" style={{ marginTop: 0, cursor: "pointer", display: "block", fontSize: "0.75rem" }}>
+                                📷 Choose Photo from Device
+                              </label>
+                            </div>
                             <input 
                               type="text" 
                               placeholder="Caption"

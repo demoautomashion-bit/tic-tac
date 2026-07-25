@@ -9,23 +9,19 @@ export default function CupidCatchGame({ step, onComplete }) {
   const [basketX, setBasketX] = useState(50); // percentage 0-100
   const [items, setItems] = useState([]);
   const containerRef = useRef(null);
-  const basketXRef = useRef(basketX);
+  const basketRef = useRef(null);
   const scoreRef = useRef(score);
-
-  useEffect(() => {
-    basketXRef.current = basketX;
-  }, [basketX]);
 
   useEffect(() => {
     scoreRef.current = score;
   }, [score]);
 
-  // Handle touch / mouse movement inside container to move basket
+  // Track touch/mouse movement to slide the basket smoothly
   const handleMove = (clientX) => {
     if (!containerRef.current) return;
     const rect = containerRef.current.getBoundingClientRect();
     const x = ((clientX - rect.left) / rect.width) * 100;
-    setBasketX(Math.max(0, Math.min(100, x)));
+    setBasketX(Math.max(5, Math.min(95, x)));
   };
 
   const onMouseMove = (e) => handleMove(e.clientX);
@@ -35,6 +31,7 @@ export default function CupidCatchGame({ step, onComplete }) {
     }
   };
 
+  // Spawn falling items
   useEffect(() => {
     if (score >= target) {
       confetti({ particleCount: 50, spread: 60, colors: ["#E68FA3", "#ECC695"] });
@@ -43,53 +40,72 @@ export default function CupidCatchGame({ step, onComplete }) {
     }
 
     const interval = setInterval(() => {
-      // Spawn a new item
+      if (scoreRef.current >= target) return;
       const symbols = ["❤️", "🎁", "💖", "🍭", "🧸", "🌸"];
       const sym = symbols[Math.floor(Math.random() * symbols.length)];
+      const duration = Math.random() * 0.8 + 2.0; // 2.0s to 2.8s drop duration
+
       setItems(prev => [
         ...prev,
         {
-          id: Math.random(),
-          x: Math.random() * 90 + 5, // 5% to 95%
-          y: 0,
-          speed: Math.random() * 0.4 + 0.6,
+          id: Math.random() + Date.now(),
+          x: Math.random() * 80 + 10, // 10% to 90%
+          duration,
           symbol: sym
         }
       ]);
-    }, 900);
+    }, 800);
 
     return () => clearInterval(interval);
   }, [score, target, onComplete]);
 
+  // Collision detection loop running at native RAF speed
   useEffect(() => {
     if (scoreRef.current >= target) return;
 
     let animId;
-    const updatePhysics = () => {
-      if (scoreRef.current >= target) return;
-      setItems(prev => {
-        const next = [];
-        for (let item of prev) {
-          const nextY = item.y + item.speed;
-          // Check collision with basket when y reaches around 82-90%
-          if (nextY >= 82 && nextY <= 90) {
-            const distance = Math.abs(item.x - basketXRef.current);
-            if (distance < 12) { // Caught!
-              setScore(s => s + 1);
-              continue; // remove item
-            }
-          }
-          if (nextY < 100) {
-            next.push({ ...item, y: nextY });
-          }
+    const checkCollisions = () => {
+      if (!basketRef.current || !containerRef.current) {
+        animId = requestAnimationFrame(checkCollisions);
+        return;
+      }
+
+      const basketRect = basketRef.current.getBoundingClientRect();
+      const itemElements = containerRef.current.querySelectorAll(".falling-item");
+
+      itemElements.forEach(el => {
+        const itemRect = el.getBoundingClientRect();
+        const itemId = el.getAttribute("data-id");
+
+        // Check bounding box overlap with basket
+        const isOverlap = !(
+          itemRect.right < basketRect.left ||
+          itemRect.left > basketRect.right ||
+          itemRect.bottom < basketRect.top ||
+          itemRect.top > basketRect.bottom
+        );
+
+        if (isOverlap) {
+          // Item caught!
+          setScore(s => {
+            const nextScore = s + 1;
+            scoreRef.current = nextScore;
+            return nextScore;
+          });
+          setItems(prev => prev.filter(i => String(i.id) !== itemId));
         }
-        return next;
       });
-      animId = requestAnimationFrame(updatePhysics);
+
+      animId = requestAnimationFrame(checkCollisions);
     };
-    animId = requestAnimationFrame(updatePhysics);
+
+    animId = requestAnimationFrame(checkCollisions);
     return () => cancelAnimationFrame(animId);
   }, [target]);
+
+  const handleAnimationEnd = (id) => {
+    setItems(prev => prev.filter(i => i.id !== id));
+  };
 
   return (
     <div className="game-card paper-vintage" style={{ maxWidth: "480px" }}>
@@ -116,17 +132,21 @@ export default function CupidCatchGame({ step, onComplete }) {
           marginTop: "1.5rem"
         }}
       >
-        {/* Falling items */}
+        {/* Falling items using GPU accelerated CSS keyframe animation */}
         {items.map(item => (
           <div
             key={item.id}
+            data-id={item.id}
+            className="falling-item"
+            onAnimationEnd={() => handleAnimationEnd(item.id)}
             style={{
               position: "absolute",
               left: `${item.x}%`,
-              top: `${item.y}%`,
-              fontSize: "1.5rem",
-              transform: "translate(-50%, -50%)",
-              pointerEvents: "none"
+              top: 0,
+              fontSize: "1.6rem",
+              pointerEvents: "none",
+              willChange: "transform",
+              animation: `smoothFall ${item.duration}s linear forwards`
             }}
           >
             {item.symbol}
@@ -135,6 +155,7 @@ export default function CupidCatchGame({ step, onComplete }) {
 
         {/* Basket */}
         <div
+          ref={basketRef}
           style={{
             position: "absolute",
             left: `${basketX}%`,
@@ -142,14 +163,26 @@ export default function CupidCatchGame({ step, onComplete }) {
             transform: "translateX(-50%)",
             fontSize: "2.5rem",
             pointerEvents: "none",
-            userSelect: "none"
+            userSelect: "none",
+            transition: "left 0.05s linear"
           }}
         >
           🧺
         </div>
       </div>
 
-      <div className="game-status" style={{ fontSize: "1.1rem", fontWeight: 600, color: "var(--ink)" }}>
+      <style jsx>{`
+        @keyframes smoothFall {
+          0% {
+            transform: translate(-50%, -30px);
+          }
+          100% {
+            transform: translate(-50%, 270px);
+          }
+        }
+      `}</style>
+
+      <div className="game-status" style={{ fontSize: "1.1rem", fontWeight: 600, color: "var(--ink)", marginTop: "1rem" }}>
         Score: {score} / {target}
       </div>
     </div>

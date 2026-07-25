@@ -642,12 +642,18 @@ section{ position:relative; padding: 2rem 0; width: 100%; }
 footer{ text-align:center; padding: 3rem 1.5rem 4rem; opacity: 0.35; font-size: 0.75rem; letter-spacing: 0.08em; }
 
 @media (max-width: 720px){
-  .t-item, .t-item:nth-child(even){ justify-content: center; }
-  .t-card{ width: 84%; }
-  .t-item:nth-child(odd) .t-card, .t-item:nth-child(even) .t-card{ transform: translateY(20px); }
-  .t-item.in:nth-child(odd) .t-card, .t-item.in:nth-child(even) .t-card{ transform: translateY(0); }
-  .timeline-line{ left: 20px; }
-  .t-dot{ left: 20px; }
+  .timeline { padding-left: 0; }
+  .timeline-line { left: 18px; transform: none; }
+  .t-item, .t-item:nth-child(even), .t-item:nth-child(odd) { justify-content: flex-end; width: 100%; }
+  .t-dot { left: 18px; transform: translate(-50%, 0); top: 1.5rem; }
+  .t-card, .t-item:nth-child(odd) .t-card, .t-item:nth-child(even) .t-card { 
+    width: calc(100% - 42px); 
+    margin-left: 42px;
+    transform: translateY(20px) !important;
+  }
+  .t-item.in:nth-child(odd) .t-card, .t-item.in:nth-child(even) .t-card { 
+    transform: translateY(0) !important; 
+  }
 }
 
 @media (prefers-reduced-motion: reduce){
