@@ -2072,6 +2072,9 @@ export default function App() {
                     <div className="paper-vintage-bg"></div>
                     <p>{currentStep.letter}</p>
                   </div>
+                  <div className="env-front">
+                    <div className="paper-vintage-bg"></div>
+                  </div>
                   <div className="env-flap"></div>
                   <div className="env-seal">
                     <svg viewBox="0 0 32 29">
