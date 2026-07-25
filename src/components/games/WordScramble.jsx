@@ -49,7 +49,7 @@ export default function WordScrambleGame({ step, onComplete }) {
       <p>{step.instruction}</p>
 
       {/* Target Word Slots */}
-      <div style={{ display: "flex", gap: "0.5rem", justifyContent: "center", margin: "2rem 0", minHeight: "50px" }}>
+      <div style={{ display: "flex", gap: "0.5rem", justifyContent: "center", margin: "2rem 0", minHeight: "50px", flexWrap: "wrap" }}>
         {Array.from({ length: originalWord.length }).map((_, idx) => {
           const letter = guess[idx];
           return (
@@ -57,13 +57,13 @@ export default function WordScrambleGame({ step, onComplete }) {
               key={idx}
               onClick={() => letter && handleGuessClick(letter)}
               style={{
-                width: "45px",
-                height: "45px",
+                width: "clamp(30px, 8vw, 45px)",
+                height: "clamp(30px, 8vw, 45px)",
                 borderBottom: "2px solid var(--ink)",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                fontSize: "1.5rem",
+                fontSize: "clamp(1.1rem, 4vw, 1.5rem)",
                 fontWeight: "bold",
                 cursor: letter ? "pointer" : "default",
                 fontFamily: "var(--sans)",

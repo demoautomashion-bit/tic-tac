@@ -74,8 +74,9 @@ export default function PolaroidPuzzleGame({ step, onComplete }) {
           display: "grid",
           gridTemplateColumns: "repeat(3, 1fr)",
           gap: "4px",
-          width: "300px",
-          height: "300px",
+          width: "min(100%, 300px)",
+          height: "auto",
+          aspectRatio: "1 / 1",
           margin: "2rem auto",
           background: "rgba(139, 90, 43, 0.1)",
           padding: "4px",
@@ -103,7 +104,7 @@ export default function PolaroidPuzzleGame({ step, onComplete }) {
                   : imageUrl 
                     ? `url(${imageUrl})` 
                     : "linear-gradient(135deg, var(--rose-pink), var(--champagne))",
-                backgroundSize: "300px 300px",
+                backgroundSize: "300% 300%",
                 backgroundPosition: `${bgX} ${bgY}`,
                 display: "flex",
                 alignItems: "center",

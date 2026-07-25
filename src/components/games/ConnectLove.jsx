@@ -60,7 +60,7 @@ export default function ConnectLoveGame({ step, onComplete }) {
       <h3>{step.title}</h3>
       <p>{step.instruction}</p>
 
-      <div className="connect-love-container" style={{ display: "flex", justifyContent: "space-between", margin: "2rem 0", gap: "2rem" }}>
+      <div className="connect-love-container" style={{ display: "flex", justifyContent: "space-between", margin: "2rem 0", gap: "clamp(0.5rem, 3vw, 2rem)" }}>
         {/* Left Column */}
         <div style={{ display: "flex", flexDirection: "column", gap: "1rem", flex: 1 }}>
           {leftItems.map(item => {
@@ -72,8 +72,8 @@ export default function ConnectLoveGame({ step, onComplete }) {
                 onClick={() => handleLeftClick(item)}
                 className={`connect-btn ${isSelected ? "selected" : ""} ${isConnected ? "connected" : ""}`}
                 style={{
-                  padding: "1rem",
-                  fontSize: "1.5rem",
+                  padding: "clamp(0.5rem, 2vw, 1rem)",
+                  fontSize: "clamp(1.1rem, 4vw, 1.5rem)",
                   borderRadius: "12px",
                   border: isSelected ? "2px solid var(--rose-pink)" : "1px solid rgba(139, 90, 43, 0.2)",
                   background: isConnected ? "rgba(230,143,163,0.15)" : isSelected ? "rgba(230,143,163,0.1)" : "rgba(255,255,255,0.4)",
@@ -82,7 +82,7 @@ export default function ConnectLoveGame({ step, onComplete }) {
                   display: "flex",
                   justifyContent: "center",
                   alignItems: "center",
-                  minHeight: "60px",
+                  minHeight: "clamp(50px, 12vw, 60px)",
                   boxShadow: "0 2px 5px rgba(0,0,0,0.05)",
                   transition: "all 0.2s ease"
                 }}
@@ -104,8 +104,8 @@ export default function ConnectLoveGame({ step, onComplete }) {
                 onClick={() => handleRightClick(item)}
                 className={`connect-btn ${isShaking ? "shake" : ""} ${isConnected ? "connected" : ""}`}
                 style={{
-                  padding: "1rem",
-                  fontSize: "1.5rem",
+                  padding: "clamp(0.5rem, 2vw, 1rem)",
+                  fontSize: "clamp(1.1rem, 4vw, 1.5rem)",
                   borderRadius: "12px",
                   border: "1px solid rgba(139, 90, 43, 0.2)",
                   background: isConnected ? "rgba(230,143,163,0.15)" : "rgba(255,255,255,0.4)",
@@ -114,7 +114,7 @@ export default function ConnectLoveGame({ step, onComplete }) {
                   display: "flex",
                   justifyContent: "center",
                   alignItems: "center",
-                  minHeight: "60px",
+                  minHeight: "clamp(50px, 12vw, 60px)",
                   boxShadow: "0 2px 5px rgba(0,0,0,0.05)",
                   transition: "all 0.2s ease"
                 }}
