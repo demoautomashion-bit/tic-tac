@@ -163,6 +163,16 @@ function CupidCatchGame({ step, onComplete }) {
   const [basketX, setBasketX] = useState(50); // percentage 0-100
   const [items, setItems] = useState([]);
   const containerRef = useRef(null);
+  const basketXRef = useRef(basketX);
+  const scoreRef = useRef(score);
+
+  useEffect(() => {
+    basketXRef.current = basketX;
+  }, [basketX]);
+
+  useEffect(() => {
+    scoreRef.current = score;
+  }, [score]);
 
   // Handle touch / mouse movement inside container to move basket
   const handleMove = (clientX) => {
@@ -196,7 +206,7 @@ function CupidCatchGame({ step, onComplete }) {
           id: Math.random(),
           x: Math.random() * 90 + 5, // 5% to 95%
           y: 0,
-          speed: Math.random() * 2 + 3,
+          speed: Math.random() * 0.4 + 0.6, // Slowed down from Math.random() * 2 + 3
           symbol: sym
         }
       ]);
@@ -206,17 +216,18 @@ function CupidCatchGame({ step, onComplete }) {
   }, [score, target]);
 
   useEffect(() => {
-    if (score >= target) return;
+    if (scoreRef.current >= target) return;
 
     let animId;
     const updatePhysics = () => {
+      if (scoreRef.current >= target) return;
       setItems(prev => {
         const next = [];
         for (let item of prev) {
           const nextY = item.y + item.speed;
-          // Check collision with basket when y reaches around 80-90%
+          // Check collision with basket when y reaches around 82-90%
           if (nextY >= 82 && nextY <= 90) {
-            const distance = Math.abs(item.x - basketX);
+            const distance = Math.abs(item.x - basketXRef.current);
             if (distance < 12) { // Caught!
               setScore(s => s + 1);
               continue; // remove item
@@ -232,7 +243,7 @@ function CupidCatchGame({ step, onComplete }) {
     };
     animId = requestAnimationFrame(updatePhysics);
     return () => cancelAnimationFrame(animId);
-  }, [basketX, score, target]);
+  }, [target]);
 
   return (
     <div className="game-card paper-vintage" style={{ maxWidth: '480px' }}>
@@ -269,8 +280,7 @@ function CupidCatchGame({ step, onComplete }) {
               top: `${item.y}%`,
               fontSize: '1.5rem',
               transform: 'translate(-50%, -50%)',
-              pointerEvents: 'none',
-              transition: 'top 0.05s linear'
+              pointerEvents: 'none'
             }}
           >
             {item.symbol}
