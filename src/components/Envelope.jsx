@@ -31,7 +31,15 @@ export default function Envelope({ step, onComplete }) {
       <div className="envelope-wrap">
         <div className={`envelope-scene ${envOpenClass}`} id="envScene">
           <div className="env-shadow"></div>
-          <button className="envelope" onClick={handleOpenEnvelope} id="envBtn" aria-label="Open the letter">
+          <div 
+            className="envelope" 
+            onClick={handleOpenEnvelope} 
+            id="envBtn" 
+            role="button" 
+            tabIndex={0}
+            aria-label="Open the letter"
+            onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && handleOpenEnvelope()}
+          >
             <div className="env-body">
               <div className="paper-vintage-bg"></div>
             </div>
@@ -40,7 +48,7 @@ export default function Envelope({ step, onComplete }) {
               <div className="env-letter-content">
                 <p>{step.letter}</p>
                 {showContinue && (
-                  <button className="vintage-btn env-continue-btn" onClick={handleContinue}>
+                  <button className="vintage-btn env-continue-btn" onClick={handleContinue} type="button">
                     Continue &rarr;
                   </button>
                 )}
@@ -56,7 +64,7 @@ export default function Envelope({ step, onComplete }) {
               </svg>
             </div>
             <div className="env-label">{step.label}</div>
-          </button>
+          </div>
         </div>
         <span className={`tap-prompt ${envOpenClass !== "" ? "gone" : ""}`} id="tapPrompt">tap to open</span>
       </div>

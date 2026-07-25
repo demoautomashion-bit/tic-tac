@@ -314,10 +314,14 @@ h1,h2,h3{ font-family: var(--serif); font-weight: 500; line-height: 1.15; }
   line-height: 1.5;
 }
 .env-continue-btn {
-  font-size: 0.75rem !important;
-  padding: 0.6rem 1.4rem !important;
+  position: relative;
+  z-index: 120 !important;
+  pointer-events: auto !important;
+  font-size: 0.8rem !important;
+  padding: 0.7rem 1.6rem !important;
   margin-top: 0.5rem;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.2) !important;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.25) !important;
+  touch-action: manipulation;
 }
 
 /* Staged Opening Transitions */
