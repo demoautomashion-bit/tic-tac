@@ -80,10 +80,49 @@ const DEFAULT_FLOW = [
     title: 'The Game of Hearts', 
     instruction: 'Win a round of Tic-Tac-Toe to unlock the next stage.' 
   },
+  {
+    id: 'cupidcatch',
+    type: 'cupidcatch',
+    eyebrow: 'chapter five',
+    title: "Cupid's Catch",
+    instruction: "Catch 10 falling hearts or gifts using the basket to unlock the next stage!",
+    targetScore: 10
+  },
+  {
+    id: 'connectlove',
+    type: 'connectlove',
+    eyebrow: 'chapter six',
+    title: 'Connect the Love',
+    instruction: 'Link the matching pairs together to unlock the next stage.'
+  },
+  {
+    id: 'wordscramble',
+    type: 'wordscramble',
+    eyebrow: 'chapter seven',
+    title: 'Romantic Word Scramble',
+    instruction: 'Unscramble the letters to reveal the secret word.',
+    targetWord: 'FOREVER'
+  },
+  {
+    id: 'loverhythm',
+    type: 'loverhythm',
+    eyebrow: 'chapter eight',
+    title: 'Love Rhythm',
+    instruction: 'Tap the heart when the expanding ring perfectly aligns with it 5 times!',
+    targetHits: 5
+  },
+  {
+    id: 'polaroidpuzzle',
+    type: 'polaroidpuzzle',
+    eyebrow: 'chapter nine',
+    title: 'Polaroid Jigsaw',
+    instruction: 'Slide the tiles to complete the image.',
+    imageUrl: ''
+  },
   { 
     id: 'memory', 
     type: 'memory', 
-    eyebrow: 'chapter five', 
+    eyebrow: 'chapter ten', 
     title: 'Memory Match', 
     instruction: 'Match all pairs of cards to unlock the next stage.', 
     symbols: ['❤️', '🌸', '🎁', '✈️', '🍿', '🧸', '🍕', '☕'] 
@@ -91,7 +130,7 @@ const DEFAULT_FLOW = [
   { 
     id: 'confession', 
     type: 'confession', 
-    eyebrow: 'chapter six', 
+    eyebrow: 'chapter eleven', 
     title: 'Reasons, in no particular order', 
     reasons: [
       "The way you laugh at your own jokes before you even finish them.",
@@ -117,6 +156,682 @@ const DEFAULT_FLOW = [
     footerYear: "2026" 
   }
 ];
+
+function CupidCatchGame({ step, onComplete }) {
+  const target = step.targetScore || 10;
+  const [score, setScore] = useState(0);
+  const [basketX, setBasketX] = useState(50); // percentage 0-100
+  const [items, setItems] = useState([]);
+  const containerRef = useRef(null);
+
+  // Handle touch / mouse movement inside container to move basket
+  const handleMove = (clientX) => {
+    if (!containerRef.current) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    const x = ((clientX - rect.left) / rect.width) * 100;
+    setBasketX(Math.max(0, Math.min(100, x)));
+  };
+
+  const onMouseMove = (e) => handleMove(e.clientX);
+  const onTouchMove = (e) => {
+    if (e.touches && e.touches[0]) {
+      handleMove(e.touches[0].clientX);
+    }
+  };
+
+  useEffect(() => {
+    if (score >= target) {
+      confetti({ particleCount: 50, spread: 60, colors: ['#E68FA3', '#ECC695'] });
+      onComplete();
+      return;
+    }
+
+    const interval = setInterval(() => {
+      // Spawn a new item
+      const symbols = ['❤️', '🎁', '💖', '🍭', '🧸', '🌸'];
+      const sym = symbols[Math.floor(Math.random() * symbols.length)];
+      setItems(prev => [
+        ...prev,
+        {
+          id: Math.random(),
+          x: Math.random() * 90 + 5, // 5% to 95%
+          y: 0,
+          speed: Math.random() * 2 + 3,
+          symbol: sym
+        }
+      ]);
+    }, 900);
+
+    return () => clearInterval(interval);
+  }, [score, target]);
+
+  useEffect(() => {
+    if (score >= target) return;
+
+    let animId;
+    const updatePhysics = () => {
+      setItems(prev => {
+        const next = [];
+        for (let item of prev) {
+          const nextY = item.y + item.speed;
+          // Check collision with basket when y reaches around 80-90%
+          if (nextY >= 82 && nextY <= 90) {
+            const distance = Math.abs(item.x - basketX);
+            if (distance < 12) { // Caught!
+              setScore(s => s + 1);
+              continue; // remove item
+            }
+          }
+          if (nextY < 100) {
+            next.push({ ...item, y: nextY });
+          }
+        }
+        return next;
+      });
+      animId = requestAnimationFrame(updatePhysics);
+    };
+    animId = requestAnimationFrame(updatePhysics);
+    return () => cancelAnimationFrame(animId);
+  }, [basketX, score, target]);
+
+  return (
+    <div className="game-card paper-vintage" style={{ maxWidth: '480px' }}>
+      <div className="paper-vintage-bg"></div>
+      {step.eyebrow && <span className="eyebrow" style={{ color: '#7A0923' }}>{step.eyebrow}</span>}
+      <h3>{step.title}</h3>
+      <p style={{ marginBottom: '1rem' }}>{step.instruction}</p>
+
+      <div 
+        ref={containerRef}
+        className="cupid-catch-container"
+        onMouseMove={onMouseMove}
+        onTouchMove={onTouchMove}
+        style={{
+          position: 'relative',
+          height: '260px',
+          background: 'rgba(255, 255, 255, 0.05)',
+          border: '1px solid rgba(139, 90, 43, 0.15)',
+          borderRadius: '8px',
+          overflow: 'hidden',
+          cursor: 'none',
+          userSelect: 'none',
+          touchAction: 'none',
+          marginTop: '1.5rem'
+        }}
+      >
+        {/* Falling items */}
+        {items.map(item => (
+          <div
+            key={item.id}
+            style={{
+              position: 'absolute',
+              left: `${item.x}%`,
+              top: `${item.y}%`,
+              fontSize: '1.5rem',
+              transform: 'translate(-50%, -50%)',
+              pointerEvents: 'none',
+              transition: 'top 0.05s linear'
+            }}
+          >
+            {item.symbol}
+          </div>
+        ))}
+
+        {/* Basket */}
+        <div
+          style={{
+            position: 'absolute',
+            left: `${basketX}%`,
+            bottom: '8px',
+            transform: 'translateX(-50%)',
+            fontSize: '2.5rem',
+            pointerEvents: 'none',
+            userSelect: 'none'
+          }}
+        >
+          🧺
+        </div>
+      </div>
+
+      <div className="game-status" style={{ fontSize: '1.1rem', fontWeight: 600, color: 'var(--ink)' }}>
+        Score: {score} / {target}
+      </div>
+    </div>
+  );
+}
+
+function ConnectLoveGame({ step, onComplete }) {
+  const initialPairs = [
+    { id: 1, left: '🔑', right: '🔒', matchId: 1 },
+    { id: 2, left: '✉️', right: '📬', matchId: 2 },
+    { id: 3, left: '☕', right: '🍩', matchId: 3 },
+    { id: 4, left: '🧸', right: '🎀', matchId: 4 }
+  ];
+
+  const [leftItems, setLeftItems] = useState([]);
+  const [rightItems, setRightItems] = useState([]);
+  const [selectedLeft, setSelectedLeft] = useState(null);
+  const [connections, setConnections] = useState([]); // Array of { leftId, rightId }
+  const [shakeId, setShakeId] = useState(null);
+
+  useEffect(() => {
+    // Shuffle the items for matching
+    const shuffledLeft = [...initialPairs].sort(() => Math.random() - 0.5);
+    const shuffledRight = [...initialPairs].sort(() => Math.random() - 0.5);
+    setLeftItems(shuffledLeft);
+    setRightItems(shuffledRight);
+  }, []);
+
+  const handleLeftClick = (item) => {
+    // If already connected, do nothing
+    if (connections.some(c => c.leftId === item.id)) return;
+    setSelectedLeft(item);
+  };
+
+  const handleRightClick = (item) => {
+    if (!selectedLeft) return;
+    // If already connected, do nothing
+    if (connections.some(c => c.rightId === item.id)) return;
+
+    if (selectedLeft.matchId === item.matchId) {
+      const newConnections = [...connections, { leftId: selectedLeft.id, rightId: item.id }];
+      setConnections(newConnections);
+      setSelectedLeft(null);
+
+      // Check if all connected
+      if (newConnections.length === initialPairs.length) {
+        setTimeout(() => {
+          confetti({ particleCount: 50, spread: 60, colors: ['#E68FA3', '#ECC695'] });
+          onComplete();
+        }, 500);
+      }
+    } else {
+      // Shaking feedback
+      setShakeId(item.id);
+      setTimeout(() => setShakeId(null), 500);
+      setSelectedLeft(null);
+    }
+  };
+
+  return (
+    <div className="game-card paper-vintage" style={{ maxWidth: '480px' }}>
+      <div className="paper-vintage-bg"></div>
+      {step.eyebrow && <span className="eyebrow" style={{ color: '#7A0923' }}>{step.eyebrow}</span>}
+      <h3>{step.title}</h3>
+      <p>{step.instruction}</p>
+
+      <div className="connect-love-container" style={{ display: 'flex', justifyContent: 'space-between', margin: '2rem 0', gap: '2rem' }}>
+        {/* Left Column */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', flex: 1 }}>
+          {leftItems.map(item => {
+            const isSelected = selectedLeft?.id === item.id;
+            const isConnected = connections.some(c => c.leftId === item.id);
+            return (
+              <button
+                key={`left-${item.id}`}
+                onClick={() => handleLeftClick(item)}
+                className={`connect-btn ${isSelected ? 'selected' : ''} ${isConnected ? 'connected' : ''}`}
+                style={{
+                  padding: '1rem',
+                  fontSize: '1.5rem',
+                  borderRadius: '12px',
+                  border: isSelected ? '2px solid var(--rose-pink)' : '1px solid rgba(139, 90, 43, 0.2)',
+                  background: isConnected ? 'rgba(230,143,163,0.15)' : isSelected ? 'rgba(230,143,163,0.1)' : 'rgba(255,255,255,0.4)',
+                  cursor: isConnected ? 'default' : 'pointer',
+                  opacity: isConnected ? 0.6 : 1,
+                  display: 'flex',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  minHeight: '60px',
+                  boxShadow: '0 2px 5px rgba(0,0,0,0.05)',
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                {item.left}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Right Column */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', flex: 1 }}>
+          {rightItems.map(item => {
+            const isConnected = connections.some(c => c.rightId === item.id);
+            const isShaking = shakeId === item.id;
+            return (
+              <button
+                key={`right-${item.id}`}
+                onClick={() => handleRightClick(item)}
+                className={`connect-btn ${isShaking ? 'shake' : ''} ${isConnected ? 'connected' : ''}`}
+                style={{
+                  padding: '1rem',
+                  fontSize: '1.5rem',
+                  borderRadius: '12px',
+                  border: '1px solid rgba(139, 90, 43, 0.2)',
+                  background: isConnected ? 'rgba(230,143,163,0.15)' : 'rgba(255,255,255,0.4)',
+                  cursor: isConnected || !selectedLeft ? 'default' : 'pointer',
+                  opacity: isConnected ? 0.6 : 1,
+                  display: 'flex',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  minHeight: '60px',
+                  boxShadow: '0 2px 5px rgba(0,0,0,0.05)',
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                {item.right}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="game-status">
+        {connections.length === initialPairs.length
+          ? "All connected! ❤️"
+          : selectedLeft 
+            ? "Now select the matching item on the right!" 
+            : "Select an item on the left to start."}
+      </div>
+    </div>
+  );
+}
+
+function WordScrambleGame({ step, onComplete }) {
+  const originalWord = (step.targetWord || 'FOREVER').toUpperCase();
+  const [scrambled, setScrambled] = useState([]);
+  const [guess, setGuess] = useState([]);
+
+  useEffect(() => {
+    // Generate scrambled letters with index to ensure uniqueness
+    const letterObjs = originalWord.split('').map((char, index) => ({ id: index, char }));
+    // Scramble until it is different from the original word
+    let shuffled = [...letterObjs];
+    do {
+      shuffled.sort(() => Math.random() - 0.5);
+    } while (shuffled.map(l => l.char).join('') === originalWord && originalWord.length > 1);
+
+    setScrambled(shuffled);
+    setGuess([]);
+  }, [originalWord]);
+
+  const handleScrambledClick = (letterObj) => {
+    setScrambled(prev => prev.filter(l => l.id !== letterObj.id));
+    setGuess(prev => [...prev, letterObj]);
+  };
+
+  const handleGuessClick = (letterObj) => {
+    setGuess(prev => prev.filter(l => l.id !== letterObj.id));
+    setScrambled(prev => [...prev, letterObj]);
+  };
+
+  useEffect(() => {
+    if (guess.length === originalWord.length && guess.length > 0) {
+      const currentWord = guess.map(l => l.char).join('');
+      if (currentWord === originalWord) {
+        setTimeout(() => {
+          confetti({ particleCount: 50, spread: 60, colors: ['#E68FA3', '#ECC695'] });
+          onComplete();
+        }, 400);
+      }
+    }
+  }, [guess, originalWord]);
+
+  return (
+    <div className="game-card paper-vintage" style={{ maxWidth: '480px' }}>
+      <div className="paper-vintage-bg"></div>
+      {step.eyebrow && <span className="eyebrow" style={{ color: '#7A0923' }}>{step.eyebrow}</span>}
+      <h3>{step.title}</h3>
+      <p>{step.instruction}</p>
+
+      {/* Target Word Slots */}
+      <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', margin: '2rem 0', minHeight: '50px' }}>
+        {Array.from({ length: originalWord.length }).map((_, idx) => {
+          const letter = guess[idx];
+          return (
+            <div
+              key={idx}
+              onClick={() => letter && handleGuessClick(letter)}
+              style={{
+                width: '45px',
+                height: '45px',
+                borderBottom: '2px solid var(--ink)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '1.5rem',
+                fontWeight: 'bold',
+                cursor: letter ? 'pointer' : 'default',
+                fontFamily: 'var(--sans)',
+                background: letter ? 'rgba(230,143,163,0.1)' : 'transparent',
+                borderRadius: '4px',
+                transition: 'all 0.2s ease'
+              }}
+            >
+              {letter?.char || ''}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Scrambled Letters Pool */}
+      <div style={{ display: 'flex', gap: '0.6rem', justifyContent: 'center', flexWrap: 'wrap', marginBottom: '2rem' }}>
+        {scrambled.map(letter => (
+          <button
+            key={letter.id}
+            onClick={() => handleScrambledClick(letter)}
+            className="vintage-btn"
+            style={{
+              padding: '0.6rem 1rem',
+              minWidth: '40px',
+              fontSize: '1.2rem',
+              boxShadow: '0 4px 8px rgba(0,0,0,0.15)',
+              borderRadius: '8px',
+              background: 'var(--champagne)'
+            }}
+          >
+            {letter.char}
+          </button>
+        ))}
+      </div>
+
+      <div className="game-status">
+        {guess.length === originalWord.length && guess.map(l => l.char).join('') !== originalWord
+          ? "Not quite! Click letters to send them back."
+          : "Tap letters to arrange them."}
+      </div>
+    </div>
+  );
+}
+
+function LoveRhythmGame({ step, onComplete }) {
+  const target = step.targetHits || 5;
+  const [hits, setHits] = useState(0);
+  const [feedback, setFeedback] = useState('Get Ready...');
+  const [feedbackClass, setFeedbackClass] = useState('');
+  const [ringScale, setRingScale] = useState(2.0);
+  const ringScaleRef = useRef(2.0);
+
+  useEffect(() => {
+    if (hits >= target) {
+      confetti({ particleCount: 50, spread: 60, colors: ['#E68FA3', '#ECC695'] });
+      onComplete();
+      return;
+    }
+
+    let lastTime = Date.now();
+    let animId;
+
+    const gameLoop = () => {
+      const now = Date.now();
+      const elapsed = now - lastTime;
+      lastTime = now;
+
+      // Decrement scale
+      let nextScale = ringScaleRef.current - elapsed * 0.0008; // speed of ring shrinking
+      if (nextScale <= 0.8) {
+        nextScale = 2.2; // reset
+        setFeedback('Miss! 💔');
+        setFeedbackClass('miss');
+      }
+      ringScaleRef.current = nextScale;
+      setRingScale(nextScale);
+
+      animId = requestAnimationFrame(gameLoop);
+    };
+
+    animId = requestAnimationFrame(gameLoop);
+    return () => cancelAnimationFrame(animId);
+  }, [hits, target]);
+
+  const handleTap = () => {
+    if (hits >= target) return;
+
+    const currentScale = ringScaleRef.current;
+    // Perfect range is around 1.0 (exact match with the central heart circle which is ~1.0 scale)
+    const diff = Math.abs(currentScale - 1.0);
+
+    if (diff < 0.12) {
+      setHits(h => h + 1);
+      setFeedback('PERFECT! ❤️');
+      setFeedbackClass('perfect');
+      ringScaleRef.current = 2.2; // reset ring
+    } else if (diff < 0.28) {
+      setHits(h => h + 1);
+      setFeedback('GREAT! ✨');
+      setFeedbackClass('great');
+      ringScaleRef.current = 2.2; // reset ring
+    } else {
+      setFeedback('Too Early/Late! 💔');
+      setFeedbackClass('miss');
+    }
+  };
+
+  return (
+    <div className="game-card paper-vintage" style={{ maxWidth: '480px' }}>
+      <div className="paper-vintage-bg"></div>
+      {step.eyebrow && <span className="eyebrow" style={{ color: '#7A0923' }}>{step.eyebrow}</span>}
+      <h3>{step.title}</h3>
+      <p>{step.instruction}</p>
+
+      {/* Rhythm Tap Visual Area */}
+      <div
+        onClick={handleTap}
+        style={{
+          position: 'relative',
+          height: '220px',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          background: 'rgba(255, 255, 255, 0.03)',
+          border: '1px solid rgba(139, 90, 43, 0.12)',
+          borderRadius: '12px',
+          margin: '2rem 0',
+          cursor: 'pointer',
+          userSelect: 'none',
+          touchAction: 'manipulation'
+        }}
+      >
+        {/* Pulsing ring */}
+        <div
+          style={{
+            position: 'absolute',
+            width: '80px',
+            height: '80px',
+            border: '2.5px solid var(--rose-pink)',
+            borderRadius: '50%',
+            transform: `scale(${ringScale})`,
+            pointerEvents: 'none',
+            opacity: Math.max(0, 1 - (ringScale - 1) / 1.2),
+            boxShadow: '0 0 10px var(--rose-pink)'
+          }}
+        />
+
+        {/* Target Ring */}
+        <div
+          style={{
+            position: 'absolute',
+            width: '80px',
+            height: '80px',
+            border: '2px dashed var(--ink)',
+            borderRadius: '50%',
+            pointerEvents: 'none',
+            opacity: 0.4
+          }}
+        />
+
+        {/* Central Heart Button/Indicator */}
+        <div
+          style={{
+            position: 'absolute',
+            fontSize: '3rem',
+            pointerEvents: 'none',
+            animation: 'heartbeat 1.5s infinite'
+          }}
+        >
+          ❤️
+        </div>
+
+        {/* Tap overlay instructions */}
+        <div style={{ position: 'absolute', bottom: '10px', fontSize: '0.75rem', opacity: 0.5 }}>
+          TAP ANYWHERE TO MATCH
+        </div>
+      </div>
+
+      <div className={`game-status ${feedbackClass}`} style={{ fontSize: '1.2rem', fontWeight: 'bold', minHeight: '30px' }}>
+        {feedback}
+      </div>
+
+      <div className="game-status" style={{ marginTop: '0.5rem' }}>
+        Progress: {hits} / {target} Hits
+      </div>
+    </div>
+  );
+}
+
+function PolaroidPuzzleGame({ step, onComplete }) {
+  const [board, setBoard] = useState([0, 1, 2, 3, 4, 5, 6, 7, 8]);
+  const [isSolved, setIsSolved] = useState(false);
+
+  // Checks if a tile can move to the empty spot (value 8)
+  const getAdjacentMoves = (index) => {
+    const row = Math.floor(index / 3);
+    const col = index % 3;
+    const moves = [];
+    if (row > 0) moves.push(index - 3); // Up
+    if (row < 2) moves.push(index + 3); // Down
+    if (col > 0) moves.push(index - 1); // Left
+    if (col < 2) moves.push(index + 1); // Right
+    return moves;
+  };
+
+  const shufflePuzzle = () => {
+    let currentBoard = [0, 1, 2, 3, 4, 5, 6, 7, 8];
+    let emptyIndex = 8;
+
+    // Perform 40 random valid swaps to ensure solvability
+    for (let i = 0; i < 40; i++) {
+      const validMoves = getAdjacentMoves(emptyIndex);
+      const randomMove = validMoves[Math.floor(Math.random() * validMoves.length)];
+      // Swap
+      currentBoard[emptyIndex] = currentBoard[randomMove];
+      currentBoard[randomMove] = 8;
+      emptyIndex = randomMove;
+    }
+    setBoard(currentBoard);
+    setIsSolved(false);
+  };
+
+  useEffect(() => {
+    shufflePuzzle();
+  }, [step.imageUrl]);
+
+  const handleTileClick = (index) => {
+    if (isSolved) return;
+    const emptyIndex = board.indexOf(8);
+    const validMoves = getAdjacentMoves(index);
+
+    if (validMoves.includes(emptyIndex)) {
+      const newBoard = [...board];
+      newBoard[emptyIndex] = board[index];
+      newBoard[index] = 8;
+      setBoard(newBoard);
+
+      // Check if solved
+      const solved = newBoard.every((val, idx) => val === idx);
+      if (solved) {
+        setIsSolved(true);
+        setTimeout(() => {
+          confetti({ particleCount: 50, spread: 60, colors: ['#E68FA3', '#ECC695'] });
+          onComplete();
+        }, 500);
+      }
+    }
+  };
+
+  const imageUrl = step.imageUrl || '';
+
+  return (
+    <div className="game-card paper-vintage" style={{ maxWidth: '440px' }}>
+      <div className="paper-vintage-bg"></div>
+      {step.eyebrow && <span className="eyebrow" style={{ color: '#7A0923' }}>{step.eyebrow}</span>}
+      <h3>{step.title}</h3>
+      <p>{step.instruction}</p>
+
+      {/* Grid container */}
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(3, 1fr)',
+          gap: '4px',
+          width: '300px',
+          height: '300px',
+          margin: '2rem auto',
+          background: 'rgba(139, 90, 43, 0.1)',
+          padding: '4px',
+          borderRadius: '8px',
+          border: '1px solid rgba(139, 90, 43, 0.2)'
+        }}
+      >
+        {board.map((tileValue, index) => {
+          const isEmpty = tileValue === 8;
+          const targetRow = Math.floor(tileValue / 3);
+          const targetCol = tileValue % 3;
+
+          // CSS properties for background position slicing
+          const bgX = (targetCol * 50) + '%';
+          const bgY = (targetRow * 50) + '%';
+
+          return (
+            <div
+              key={index}
+              onClick={() => handleTileClick(index)}
+              style={{
+                borderRadius: '4px',
+                cursor: isEmpty || isSolved ? 'default' : 'pointer',
+                background: isEmpty 
+                  ? 'transparent' 
+                  : imageUrl 
+                    ? `url(${imageUrl})` 
+                    : 'linear-gradient(135deg, var(--rose-pink), var(--champagne))',
+                backgroundSize: '300px 300px',
+                backgroundPosition: `${bgX} ${bgY}`,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '1.2rem',
+                fontWeight: 'bold',
+                color: imageUrl ? 'transparent' : 'var(--bg-dark-1)',
+                boxShadow: isEmpty ? 'none' : 'inset 0 0 10px rgba(255,255,255,0.2), 0 2px 4px rgba(0,0,0,0.1)',
+                transition: 'background 0.2s, transform 0.1s ease',
+                position: 'relative',
+                aspectRatio: '1 / 1'
+              }}
+            >
+              {/* Default graphic if no image is uploaded: cute heart or numbers */}
+              {!isEmpty && !imageUrl && (
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                  <span style={{ fontSize: '1.4rem' }}>❤️</span>
+                  <span style={{ fontSize: '0.65rem', opacity: 0.6, marginTop: '-4px' }}>{tileValue + 1}</span>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="game-status">
+        {isSolved ? "Solved! Beautiful. ❤️" : "Click tiles next to the empty space to slide."}
+      </div>
+
+      {!isSolved && (
+        <button className="vintage-btn" onClick={shufflePuzzle} style={{ background: '#ECC695', fontSize: '0.7rem', padding: '0.5rem 1rem' }}>
+          Reset Puzzle
+        </button>
+      )}
+    </div>
+  );
+}
 
 export default function App() {
   const [flowConfig, setFlowConfig] = useState([]);
@@ -753,6 +1468,30 @@ export default function App() {
       newStep.title = 'Memory Match';
       newStep.instruction = 'Match the cards to proceed.';
       newStep.symbols = ['❤️', '⭐', '🎈', '☀️', '☕', '🧁', '🎵', '🎨'];
+    } else if (type === 'cupidcatch') {
+      newStep.eyebrow = 'new chapter';
+      newStep.title = "Cupid's Catch";
+      newStep.instruction = 'Catch 10 hearts or gifts to proceed.';
+      newStep.targetScore = 10;
+    } else if (type === 'connectlove') {
+      newStep.eyebrow = 'new chapter';
+      newStep.title = 'Connect the Love';
+      newStep.instruction = 'Link the matching pairs together to proceed.';
+    } else if (type === 'wordscramble') {
+      newStep.eyebrow = 'new chapter';
+      newStep.title = 'Romantic Word Scramble';
+      newStep.instruction = 'Unscramble the letters to reveal the secret word.';
+      newStep.targetWord = 'FOREVER';
+    } else if (type === 'loverhythm') {
+      newStep.eyebrow = 'new chapter';
+      newStep.title = 'Love Rhythm';
+      newStep.instruction = 'Tap the heart when the expanding ring perfectly aligns with it.';
+      newStep.targetHits = 5;
+    } else if (type === 'polaroidpuzzle') {
+      newStep.eyebrow = 'new chapter';
+      newStep.title = 'Polaroid Jigsaw';
+      newStep.instruction = 'Slide the tiles to complete the image.';
+      newStep.imageUrl = '';
     } else if (type === 'confession') {
       newStep.eyebrow = 'new chapter';
       newStep.title = 'Our Final Chapter';
@@ -1074,6 +1813,102 @@ export default function App() {
                         </div>
                       </>
                     )}
+                    
+                    {step.type === 'cupidcatch' && (
+                      <>
+                        <div className="custom-input-group">
+                          <label>Instruction Text</label>
+                          <input 
+                            type="text" 
+                            value={step.instruction || ''} 
+                            onChange={(e) => handleUpdateStepProperty(idx, 'instruction', e.target.value)} 
+                          />
+                        </div>
+                        <div className="custom-input-group">
+                          <label>Target Score</label>
+                          <input 
+                            type="number" 
+                            value={step.targetScore || 10} 
+                            onChange={(e) => handleUpdateStepProperty(idx, 'targetScore', parseInt(e.target.value) || 10)} 
+                          />
+                        </div>
+                      </>
+                    )}
+
+                    {step.type === 'connectlove' && (
+                      <div className="custom-input-group">
+                        <label>Instruction Text</label>
+                        <input 
+                          type="text" 
+                          value={step.instruction || ''} 
+                          onChange={(e) => handleUpdateStepProperty(idx, 'instruction', e.target.value)} 
+                        />
+                      </div>
+                    )}
+
+                    {step.type === 'wordscramble' && (
+                      <>
+                        <div className="custom-input-group">
+                          <label>Instruction Text</label>
+                          <input 
+                            type="text" 
+                            value={step.instruction || ''} 
+                            onChange={(e) => handleUpdateStepProperty(idx, 'instruction', e.target.value)} 
+                          />
+                        </div>
+                        <div className="custom-input-group">
+                          <label>Target Word</label>
+                          <input 
+                            type="text" 
+                            value={step.targetWord || 'FOREVER'} 
+                            onChange={(e) => handleUpdateStepProperty(idx, 'targetWord', e.target.value.toUpperCase())} 
+                          />
+                        </div>
+                      </>
+                    )}
+
+                    {step.type === 'loverhythm' && (
+                      <>
+                        <div className="custom-input-group">
+                          <label>Instruction Text</label>
+                          <input 
+                            type="text" 
+                            value={step.instruction || ''} 
+                            onChange={(e) => handleUpdateStepProperty(idx, 'instruction', e.target.value)} 
+                          />
+                        </div>
+                        <div className="custom-input-group">
+                          <label>Target Hits</label>
+                          <input 
+                            type="number" 
+                            value={step.targetHits || 5} 
+                            onChange={(e) => handleUpdateStepProperty(idx, 'targetHits', parseInt(e.target.value) || 5)} 
+                          />
+                        </div>
+                      </>
+                    )}
+
+                    {step.type === 'polaroidpuzzle' && (
+                      <>
+                        <div className="custom-input-group">
+                          <label>Instruction Text</label>
+                          <input 
+                            type="text" 
+                            value={step.instruction || ''} 
+                            onChange={(e) => handleUpdateStepProperty(idx, 'instruction', e.target.value)} 
+                          />
+                        </div>
+                        <div className="custom-input-group">
+                          <label>Image URL (Optional)</label>
+                          <input 
+                            type="text" 
+                            value={step.imageUrl || ''} 
+                            placeholder="Leave blank for heart pattern"
+                            onChange={(e) => handleUpdateStepProperty(idx, 'imageUrl', e.target.value)} 
+                          />
+                        </div>
+                      </>
+                    )}
 
                     {step.type === 'confession' && (
                       <>
@@ -1184,6 +2019,11 @@ export default function App() {
               <button className="editor-btn-secondary" style={{ marginTop: 0 }} onClick={() => handleAddStep('timeline')}>+ Timeline</button>
               <button className="editor-btn-secondary" style={{ marginTop: 0 }} onClick={() => handleAddStep('tictactoe')}>+ TicTacToe</button>
               <button className="editor-btn-secondary" style={{ marginTop: 0 }} onClick={() => handleAddStep('memory')}>+ Memory</button>
+              <button className="editor-btn-secondary" style={{ marginTop: 0 }} onClick={() => handleAddStep('cupidcatch')}>+ Cupid's Catch</button>
+              <button className="editor-btn-secondary" style={{ marginTop: 0 }} onClick={() => handleAddStep('connectlove')}>+ Connect Love</button>
+              <button className="editor-btn-secondary" style={{ marginTop: 0 }} onClick={() => handleAddStep('wordscramble')}>+ Scramble</button>
+              <button className="editor-btn-secondary" style={{ marginTop: 0 }} onClick={() => handleAddStep('loverhythm')}>+ Rhythm</button>
+              <button className="editor-btn-secondary" style={{ marginTop: 0 }} onClick={() => handleAddStep('polaroidpuzzle')}>+ Jigsaw</button>
             </div>
             <button className="editor-btn-secondary" onClick={() => handleAddStep('confession')}>+ Final Confession</button>
           </div>
@@ -1386,6 +2226,41 @@ export default function App() {
           </div>
         )}
 
+        {/* STEP TYPE: CUPID CATCH */}
+        {currentStep.type === 'cupidcatch' && (
+          <div className="stage-panel" style={{ display: 'flex', justifyContent: 'center' }}>
+            <CupidCatchGame step={currentStep} onComplete={handleNextStep} />
+          </div>
+        )}
+
+        {/* STEP TYPE: CONNECT LOVE */}
+        {currentStep.type === 'connectlove' && (
+          <div className="stage-panel" style={{ display: 'flex', justifyContent: 'center' }}>
+            <ConnectLoveGame step={currentStep} onComplete={handleNextStep} />
+          </div>
+        )}
+
+        {/* STEP TYPE: WORD SCRAMBLE */}
+        {currentStep.type === 'wordscramble' && (
+          <div className="stage-panel" style={{ display: 'flex', justifyContent: 'center' }}>
+            <WordScrambleGame step={currentStep} onComplete={handleNextStep} />
+          </div>
+        )}
+
+        {/* STEP TYPE: LOVE RHYTHM */}
+        {currentStep.type === 'loverhythm' && (
+          <div className="stage-panel" style={{ display: 'flex', justifyContent: 'center' }}>
+            <LoveRhythmGame step={currentStep} onComplete={handleNextStep} />
+          </div>
+        )}
+
+        {/* STEP TYPE: POLAROID PUZZLE */}
+        {currentStep.type === 'polaroidpuzzle' && (
+          <div className="stage-panel" style={{ display: 'flex', justifyContent: 'center' }}>
+            <PolaroidPuzzleGame step={currentStep} onComplete={handleNextStep} />
+          </div>
+        )}
+
         {/* STEP TYPE: MEMORY */}
         {currentStep.type === 'memory' && (
           <div className="stage-panel">
@@ -1515,7 +2390,16 @@ export default function App() {
             <button className="vintage-btn" style={{ background: 'transparent', border: '1px solid rgba(236,198,149,0.3)', color: 'var(--champagne)' }} onClick={handlePrevStep}>
               ← Back
             </button>
-            {currentStep.type !== 'quiz' && currentStep.type !== 'tictactoe' && currentStep.type !== 'memory' && currentStep.type !== 'timeline' && currentStepIndex < flowConfig.length - 1 && (
+            {currentStep.type !== 'quiz' && 
+             currentStep.type !== 'tictactoe' && 
+             currentStep.type !== 'memory' && 
+             currentStep.type !== 'timeline' && 
+             currentStep.type !== 'cupidcatch' && 
+             currentStep.type !== 'connectlove' && 
+             currentStep.type !== 'wordscramble' && 
+             currentStep.type !== 'loverhythm' && 
+             currentStep.type !== 'polaroidpuzzle' && 
+             currentStepIndex < flowConfig.length - 1 && (
               <button className="vintage-btn" onClick={handleNextStep}>
                 Skip / Next →
               </button>
