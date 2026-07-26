@@ -10,6 +10,7 @@
     "lint": "oxlint"
   },
   "dependencies": {
+    "@vercel/blob": "^2.6.1",
     "canvas-confetti": "^1.9.4",
     "lz-string": "^1.5.0",
     "next": "^15.1.0",
