@@ -1,17 +1,8 @@
 import { NextResponse } from "next/server";
 
-// Simple in-memory / persistent store for card payloads
-const cardStore = new Map();
-
-// Helper to generate a short random alphanumeric ID (e.g. "k8F2mP9x")
-function generateShortId(length = 7) {
-  const chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-  let result = "";
-  for (let i = 0; i < length; i++) {
-    result += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return result;
-}
+// Using persistent public JSON storage API (JSONBin) for global cross-device access
+const BIN_ENDPOINT = "https://api.jsonbin.io/v3/b";
+const MASTER_KEY = "$2a$10$vYjCkWvA4N94Pvgw/.mBteS09sI72yB9z6p.lXqJ91E7l.eL.N77e";
 
 export async function POST(request) {
   try {
@@ -22,10 +13,22 @@ export async function POST(request) {
       return NextResponse.json({ error: "Invalid flow payload" }, { status: 400 });
     }
 
-    const shortId = generateShortId();
-    cardStore.set(shortId, { flow, theme, createdAt: new Date().toISOString() });
+    const res = await fetch(BIN_ENDPOINT, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Master-Key": MASTER_KEY,
+        "X-Bin-Private": "false",
+      },
+      body: JSON.stringify({ flow, theme, createdAt: new Date().toISOString() }),
+    });
 
-    return NextResponse.json({ id: shortId, success: true });
+    const data = await res.json();
+    if (data && data.metadata && data.metadata.id) {
+      return NextResponse.json({ id: data.metadata.id, success: true });
+    }
+
+    return NextResponse.json({ error: "Failed to persist card" }, { status: 500 });
   } catch (error) {
     console.error("API POST card error:", error);
     return NextResponse.json({ error: "Failed to save card payload" }, { status: 500 });
@@ -41,12 +44,23 @@ export async function GET(request) {
       return NextResponse.json({ error: "Missing card ID" }, { status: 400 });
     }
 
-    const cardData = cardStore.get(id);
-    if (!cardData) {
+    const res = await fetch(`${BIN_ENDPOINT}/${encodeURIComponent(id)}/latest`, {
+      method: "GET",
+      headers: {
+        "X-Master-Key": MASTER_KEY,
+      },
+    });
+
+    if (!res.ok) {
       return NextResponse.json({ error: "Card payload not found" }, { status: 404 });
     }
 
-    return NextResponse.json({ record: cardData, success: true });
+    const data = await res.json();
+    if (data && data.record) {
+      return NextResponse.json({ record: data.record, success: true });
+    }
+
+    return NextResponse.json({ error: "Invalid card data structure" }, { status: 404 });
   } catch (error) {
     console.error("API GET card error:", error);
     return NextResponse.json({ error: "Failed to retrieve card payload" }, { status: 500 });

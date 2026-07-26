@@ -180,6 +180,7 @@ export default function Home() {
       const cardParam = params.get("card");
       
       // 1. Try short cloud ID parameter first (e.g. ?c=binId)
+      // When a short ID URL is opened, strictly bypass localStorage!
       if (cloudId) {
         const cloudData = await fetchCardPayloadFromCloud(cloudId);
         if (cloudData && cloudData.flow && Array.isArray(cloudData.flow)) {
@@ -206,6 +207,7 @@ export default function Home() {
         }
       }
 
+      // 3. Only read from local storage if NO share URL parameters are present
       const savedTheme = localStorage.getItem('app_color_theme');
       if (savedTheme) {
         setCurrentTheme(savedTheme);
