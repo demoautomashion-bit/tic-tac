@@ -758,7 +758,7 @@ section{ position:relative; padding: 2rem 0; width: 100%; }
 }
 .polaroid-cap{ font-family: var(--hand); color: var(--ink); text-align:center; padding-top: 0.8rem; font-size: 1.3rem; z-index: 2; position: relative; }
 
-/* ---------- CLOSING ---------- */
+/* ---------- CLOSING & CONFESSION BUTTON ---------- */
 .closing-card {
   padding: clamp(2rem, 5vw, 4rem);
   text-align: center;
@@ -768,9 +768,46 @@ section{ position:relative; padding: 2rem 0; width: 100%; }
   text-shadow: 0 0 50px rgba(230,198,149,0.25);
   line-height: 1.3;
 }
-.closing-card .sig { font-family: var(--script); font-size: 2.8rem; color: #7A0923; margin-bottom: 2.5rem; }
+.closing-card .sig { font-family: var(--script); font-size: 2.8rem; color: var(--rose-pink); margin-bottom: 2rem; }
 
-footer{ text-align:center; padding: 3rem 1.5rem 4rem; opacity: 0.35; font-size: 0.75rem; letter-spacing: 0.08em; }
+.one-more {
+  border: none;
+  outline: none;
+  background: var(--champagne);
+  color: #120813;
+  font-family: var(--sans);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  font-size: 0.82rem;
+  padding: 0.9rem 2.2rem;
+  border-radius: 40px;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  position: relative;
+  z-index: 10;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.25s ease, background 0.25s ease;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+}
+.one-more * {
+  pointer-events: none;
+}
+.one-more:hover {
+  transform: translateY(-3px) scale(1.04);
+  box-shadow: 0 12px 25px rgba(0,0,0,0.4);
+  filter: brightness(1.08);
+}
+.one-more:active {
+  transform: translateY(1px) scale(0.98);
+}
+
+footer{ text-align:center; padding: 3rem 1.5rem 4rem; opacity: 0.5; font-size: 0.75rem; letter-spacing: 0.08em; color: var(--text-light); }
 
 @media (max-width: 720px){
   .timeline { padding-left: 0; }
@@ -801,7 +838,7 @@ footer{ text-align:center; padding: 3rem 1.5rem 4rem; opacity: 0.35; font-size: 
   right: 1rem;
   z-index: 1000;
   background: var(--bg-dark-2);
-  border: 1px solid rgba(230, 197, 148, 0.3);
+  border: 1px solid var(--parchment-border);
   color: var(--champagne);
   padding: 0.6rem;
   border-radius: 50%;
@@ -825,15 +862,17 @@ footer{ text-align:center; padding: 3rem 1.5rem 4rem; opacity: 0.35; font-size: 
   right: 0;
   bottom: 0;
   width: min(480px, 95vw);
-  background: rgba(43, 2, 11, 0.95);
-  backdrop-filter: blur(12px);
-  border-left: 1px solid rgba(236, 198, 149, 0.2);
+  background: var(--bg-dark-2);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-left: 1px solid var(--parchment-border);
   z-index: 999;
   display: flex;
   flex-direction: column;
   box-shadow: -10px 0 30px rgba(0,0,0,0.5);
-  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), background 0.4s ease, border-color 0.4s ease;
   transform: translateX(100%);
+  color: var(--text-light);
 }
 .customizer-panel.open {
   transform: translateX(0);
@@ -841,7 +880,7 @@ footer{ text-align:center; padding: 3rem 1.5rem 4rem; opacity: 0.35; font-size: 
 
 .customizer-header {
   padding: 1.25rem 1.5rem;
-  border-bottom: 1px solid rgba(236, 198, 149, 0.15);
+  border-bottom: 1px solid var(--parchment-border);
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -875,7 +914,7 @@ footer{ text-align:center; padding: 3rem 1.5rem 4rem; opacity: 0.35; font-size: 
   color: var(--rose-pink);
   font-size: 1.2rem;
   margin-bottom: 1rem;
-  border-bottom: 1px solid rgba(230, 143, 163, 0.2);
+  border-bottom: 1px solid var(--parchment-border);
   padding-bottom: 0.3rem;
 }
 
@@ -892,15 +931,15 @@ footer{ text-align:center; padding: 3rem 1.5rem 4rem; opacity: 0.35; font-size: 
 }
 .custom-input-group input, .custom-input-group textarea, .custom-input-group select {
   width: 100%;
-  background: rgba(21, 0, 5, 0.6);
-  border: 1px solid rgba(236, 198, 149, 0.3);
+  background: var(--bg-dark-1);
+  border: 1px solid var(--parchment-border);
   border-radius: 6px;
   color: var(--text-light);
   padding: 0.6rem 0.8rem;
   font-family: var(--sans);
   font-size: 0.9rem;
   outline: none;
-  transition: border-color 0.2s;
+  transition: border-color 0.2s, background 0.4s;
 }
 .custom-input-group input:focus, .custom-input-group textarea:focus, .custom-input-group select:focus {
   border-color: var(--rose-pink);
