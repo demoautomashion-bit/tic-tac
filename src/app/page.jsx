@@ -155,9 +155,12 @@ const DEFAULT_FLOW = [
   }
 ];
 
-const encodeConfig = (config) => {
+import ShareModal from "@/components/ShareModal";
+
+const encodeConfig = (config, theme) => {
   try {
-    const str = JSON.stringify(config);
+    const payload = { flow: config, theme };
+    const str = JSON.stringify(payload);
     return btoa(unescape(encodeURIComponent(str)));
   } catch (e) {
     console.error(e);
@@ -168,7 +171,12 @@ const encodeConfig = (config) => {
 const decodeConfig = (base64Str) => {
   try {
     const decoded = decodeURIComponent(escape(atob(base64Str)));
-    return JSON.parse(decoded);
+    const parsed = JSON.parse(decoded);
+    // Backward compatibility if parsed is array instead of payload object
+    if (Array.isArray(parsed)) {
+      return { flow: parsed, theme: null };
+    }
+    return parsed;
   } catch (e) {
     console.error(e);
     return null;
@@ -182,23 +190,9 @@ export default function Home() {
   const [editingStepIndex, setEditingStepIndex] = useState(null);
   const [copiedLink, setCopiedLink] = useState(false);
   const [currentTheme, setCurrentTheme] = useState('burgundy');
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+  const [shareUrl, setShareUrl] = useState("");
   const canvasRef = useRef(null);
-
-  useEffect(() => {
-    const savedTheme = localStorage.getItem('app_color_theme');
-    if (savedTheme) {
-      setCurrentTheme(savedTheme);
-      document.documentElement.setAttribute('data-theme', savedTheme);
-    } else {
-      document.documentElement.setAttribute('data-theme', 'burgundy');
-    }
-  }, []);
-
-  const handleSelectTheme = (themeId) => {
-    setCurrentTheme(themeId);
-    localStorage.setItem('app_color_theme', themeId);
-    document.documentElement.setAttribute('data-theme', themeId);
-  };
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -206,10 +200,22 @@ export default function Home() {
     
     if (cardParam) {
       const decoded = decodeConfig(cardParam);
-      if (decoded && Array.isArray(decoded)) {
-        setFlowConfig(decoded);
+      if (decoded && decoded.flow && Array.isArray(decoded.flow)) {
+        setFlowConfig(decoded.flow);
+        if (decoded.theme) {
+          setCurrentTheme(decoded.theme);
+          document.documentElement.setAttribute('data-theme', decoded.theme);
+        }
         return;
       }
+    }
+
+    const savedTheme = localStorage.getItem('app_color_theme');
+    if (savedTheme) {
+      setCurrentTheme(savedTheme);
+      document.documentElement.setAttribute('data-theme', savedTheme);
+    } else {
+      document.documentElement.setAttribute('data-theme', 'burgundy');
     }
 
     const saved = localStorage.getItem("custom_flow_config");
@@ -227,6 +233,15 @@ export default function Home() {
 
     setFlowConfig(DEFAULT_FLOW);
   }, []);
+
+  // Update browser URL in real time whenever configuration or theme changes
+  useEffect(() => {
+    if (flowConfig.length === 0) return;
+    const hash = encodeConfig(flowConfig, currentTheme);
+    const newUrl = `${window.location.pathname}?card=${hash}`;
+    window.history.replaceState(null, "", newUrl);
+    setShareUrl(window.location.origin + newUrl);
+  }, [flowConfig, currentTheme]);
 
   const handleNextStep = () => {
     if (currentStepIndex < flowConfig.length - 1) {
@@ -487,13 +502,22 @@ export default function Home() {
     handleSaveToLocalStorage(newFlow);
   };
 
-  const generateSharingLink = () => {
-    const hash = encodeConfig(flowConfig);
-    const origin = window.location.origin + window.location.pathname;
-    const link = `${origin}?card=${hash}`;
-    navigator.clipboard.writeText(link);
+  const handleSelectTheme = (themeId) => {
+    setCurrentTheme(themeId);
+    localStorage.setItem('app_color_theme', themeId);
+    document.documentElement.setAttribute('data-theme', themeId);
+  };
+
+  const handleCopyShareUrl = () => {
+    if (!shareUrl) return;
+    navigator.clipboard.writeText(shareUrl);
     setCopiedLink(true);
     setTimeout(() => setCopiedLink(false), 2000);
+  };
+
+  const generateSharingLink = () => {
+    handleCopyShareUrl();
+    setIsShareModalOpen(true);
   };
 
   const currentStep = flowConfig[currentStepIndex] || {};
@@ -518,6 +542,7 @@ export default function Home() {
         setEditingStepIndex={setEditingStepIndex}
         copiedLink={copiedLink}
         generateSharingLink={generateSharingLink}
+        onOpenShareModal={() => setIsShareModalOpen(true)}
         handleResetToDefault={handleResetToDefault}
         handleMoveUp={handleMoveUp}
         handleMoveDown={handleMoveDown}
@@ -527,6 +552,14 @@ export default function Home() {
         handleSaveToLocalStorage={handleSaveToLocalStorage}
         currentTheme={currentTheme}
         onSelectTheme={handleSelectTheme}
+      />
+
+      <ShareModal 
+        isOpen={isShareModalOpen}
+        onClose={() => setIsShareModalOpen(false)}
+        shareUrl={shareUrl}
+        copiedLink={copiedLink}
+        onCopy={handleCopyShareUrl}
       />
 
       <div className="stage-container">

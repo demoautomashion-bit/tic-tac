@@ -10,6 +10,7 @@ export default function CustomizerPanel({
   setEditingStepIndex,
   copiedLink,
   generateSharingLink,
+  onOpenShareModal,
   handleResetToDefault,
   handleMoveUp,
   handleMoveDown,
@@ -37,6 +38,27 @@ export default function CustomizerPanel({
       </div>
 
       <div className="customizer-content">
+        {/* Prominent Share Banner */}
+        <div style={{
+          background: "linear-gradient(135deg, rgba(236,198,149,0.15), rgba(225,29,72,0.15))",
+          border: "1px solid rgba(236,198,149,0.4)",
+          borderRadius: "12px",
+          padding: "1rem",
+          marginBottom: "1.25rem",
+          textAlign: "center"
+        }}>
+          <h4 style={{ margin: "0 0 0.4rem 0", color: "#fcead2", fontSize: "0.95rem" }}>🚀 Ready to Send Your Card?</h4>
+          <p style={{ margin: "0 0 0.75rem 0", fontSize: "0.78rem", opacity: 0.85 }}>
+            Generate a shareable link that contains all your custom questions, slides, and chosen theme!
+          </p>
+          <button 
+            className="editor-btn-primary"
+            onClick={onOpenShareModal}
+            style={{ width: "100%", margin: 0, padding: "10px" }}
+          >
+            💌 Share & Send Card
+          </button>
+        </div>
         {/* Theme & Atmosphere Customizer Section */}
         <div className="customizer-section" style={{ borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '1.25rem', marginBottom: '1.25rem' }}>
           <h3 style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>🎨 Theme & Visual Atmosphere</h3>
@@ -613,8 +635,8 @@ export default function CustomizerPanel({
       </div>
 
       <div className="customizer-footer">
-        <button className="editor-btn-primary" onClick={generateSharingLink}>
-          {copiedLink ? "✓ Copied Link!" : "Copy Shareable Link"}
+        <button className="editor-btn-primary" onClick={onOpenShareModal}>
+          💌 Share & Send Card
         </button>
         <button className="editor-btn-secondary" style={{ borderStyle: "solid", marginTop: 0 }} onClick={handleResetToDefault}>
           Reset to Default Flow
