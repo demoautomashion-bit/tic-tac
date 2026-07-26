@@ -1,55 +1,51 @@
 /**
  * Storage handler for card payloads.
- * Uses a free public JSON Bin API service (JSONBin / kv store) to save card payloads
- * and return short 6-8 character IDs for ultra-clean shareable links.
+ * Uses native same-origin Next.js API endpoint (/api/card)
+ * returning short 7-character IDs guaranteed across all mobile devices.
  */
-
-// Free public JSON storage endpoint (using JSONBin.io public structure or fallback bin service)
-const BIN_ENDPOINT = "https://api.jsonbin.io/v3/b";
-const MASTER_KEY = "$2a$10$vYjCkWvA4N94Pvgw/.mBteS09sI72yB9z6p.lXqJ91E7l.eL.N77e"; // Public read/write key for client app
 
 /**
- * Saves a card payload to cloud JSON storage and returns a short ID.
+ * Saves a card payload to native API endpoint and returns a short ID.
  */
 export async function saveCardPayloadToCloud(flow, theme) {
-  const payload = { flow, theme, createdAt: new Date().toISOString() };
+  const payload = { flow, theme };
 
   try {
-    const res = await fetch(BIN_ENDPOINT, {
+    const res = await fetch("/api/card", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "X-Master-Key": MASTER_KEY,
-        "X-Bin-Private": "false",
       },
       body: JSON.stringify(payload),
     });
 
+    if (!res.ok) {
+      console.error("API error response:", res.status);
+      return null;
+    }
+
     const data = await res.json();
-    if (data && data.metadata && data.metadata.id) {
-      return data.metadata.id; // Returns short bin ID e.g. "667a1b4e..."
+    if (data && data.success && data.id) {
+      return data.id; // Returns short ID e.g. "k8F2mP9x"
     } else {
-      console.warn("Cloud save warning, falling back to local encoding:", data);
+      console.warn("Card save warning:", data);
       return null;
     }
   } catch (err) {
-    console.error("Cloud card save error:", err);
+    console.error("Card payload save error:", err);
     return null;
   }
 }
 
 /**
- * Fetches a card payload from cloud storage by bin ID.
+ * Fetches a card payload from native API endpoint by short ID.
  */
 export async function fetchCardPayloadFromCloud(binId) {
   if (!binId) return null;
 
   try {
-    const res = await fetch(`${BIN_ENDPOINT}/${binId}/latest`, {
+    const res = await fetch(`/api/card?id=${encodeURIComponent(binId)}`, {
       method: "GET",
-      headers: {
-        "X-Master-Key": MASTER_KEY,
-      },
     });
 
     if (!res.ok) return null;

@@ -237,25 +237,22 @@ export default function Home() {
   useEffect(() => {
     if (flowConfig.length === 0) return;
     
-    // If we have an active short cloud ID, keep the URL short!
+    // If we have an active short cloud ID, set the share URL
     if (activeCloudId) {
       const shortUrl = `${window.location.origin}${window.location.pathname}?c=${activeCloudId}`;
       setShareUrl(shortUrl);
       window.history.replaceState(null, "", `?c=${activeCloudId}`);
-      return;
+    } else {
+      // Clear shareUrl until short ID is generated on share click
+      setShareUrl("");
     }
-
-    // Fallback inline encoded string only when no cloud ID is created yet
-    const compressedStr = encodeCardPayload(flowConfig, currentTheme);
-    const fallbackUrl = `${window.location.origin}${window.location.pathname}?card=${compressedStr}`;
-    setShareUrl(fallbackUrl);
   }, [flowConfig, currentTheme, activeCloudId]);
 
   const generateSharingLink = async () => {
     setIsGeneratingShareLink(true);
     setIsShareModalOpen(true);
 
-    // Save payload to cloud to get permanent short ID
+    // Save payload to native same-origin endpoint to get short ID
     const binId = await saveCardPayloadToCloud(flowConfig, currentTheme);
     if (binId) {
       setActiveCloudId(binId);
