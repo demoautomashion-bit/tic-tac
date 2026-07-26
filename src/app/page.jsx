@@ -174,29 +174,13 @@ export default function Home() {
   const canvasRef = useRef(null);
 
   useEffect(() => {
-    async function loadCardData() {
+    function loadCardData() {
       const params = new URLSearchParams(window.location.search);
-      const cloudId = params.get("c");
-      const cardParam = params.get("card");
+      const cardParam = params.get("card") || params.get("c");
       
-      // 1. Try short cloud ID parameter first (e.g. ?c=binId)
-      // When a short ID URL is opened, strictly bypass localStorage!
-      if (cloudId) {
-        const cloudData = await fetchCardPayloadFromCloud(cloudId);
-        if (cloudData && cloudData.flow && Array.isArray(cloudData.flow)) {
-          setFlowConfig(cloudData.flow);
-          setActiveCloudId(cloudId);
-          if (cloudData.theme) {
-            setCurrentTheme(cloudData.theme);
-            document.documentElement.setAttribute('data-theme', cloudData.theme);
-          }
-          return;
-        }
-      }
-
-      // 2. Legacy encoded parameter fallback (?card=...)
+      // If a card parameter is in the URL, decode it and STRICTLY bypass localStorage!
       if (cardParam) {
-        const decoded = decodeCardPayload(cardParam);
+        const decoded = decodeCardPayload(cardParam, DEFAULT_FLOW);
         if (decoded && decoded.flow && Array.isArray(decoded.flow)) {
           setFlowConfig(decoded.flow);
           if (decoded.theme) {
@@ -207,7 +191,7 @@ export default function Home() {
         }
       }
 
-      // 3. Only read from local storage if NO share URL parameters are present
+      // Only read from local storage if NO share URL parameters are present
       const savedTheme = localStorage.getItem('app_color_theme');
       if (savedTheme) {
         setCurrentTheme(savedTheme);
@@ -238,43 +222,17 @@ export default function Home() {
   // Update share link state when configuration or theme changes
   useEffect(() => {
     if (flowConfig.length === 0) return;
-    
-    // If we have an active short cloud ID, set the share URL
-    if (activeCloudId) {
-      const shortUrl = `${window.location.origin}${window.location.pathname}?c=${activeCloudId}`;
-      setShareUrl(shortUrl);
-      window.history.replaceState(null, "", `?c=${activeCloudId}`);
-    } else {
-      // Clear shareUrl until short ID is generated on share click
-      setShareUrl("");
-    }
-  }, [flowConfig, currentTheme, activeCloudId]);
+    const compressedStr = encodeCardPayload(flowConfig, currentTheme, DEFAULT_FLOW);
+    const shortUrl = `${window.location.origin}${window.location.pathname}?c=${compressedStr}`;
+    setShareUrl(shortUrl);
+  }, [flowConfig, currentTheme]);
 
-  const generateSharingLink = async () => {
-    setIsGeneratingShareLink(true);
+  const generateSharingLink = () => {
+    const compressedStr = encodeCardPayload(flowConfig, currentTheme, DEFAULT_FLOW);
+    const shortUrl = `${window.location.origin}${window.location.pathname}?c=${compressedStr}`;
+    setShareUrl(shortUrl);
+    window.history.replaceState(null, "", `?c=${compressedStr}`);
     setIsShareModalOpen(true);
-
-    try {
-      // 1. Try primary cloud storage endpoint
-      const binId = await saveCardPayloadToCloud(flowConfig, currentTheme);
-      if (binId) {
-        setActiveCloudId(binId);
-        const shortUrl = `${window.location.origin}${window.location.pathname}?c=${binId}`;
-        setShareUrl(shortUrl);
-        window.history.replaceState(null, "", `?c=${binId}`);
-        setIsGeneratingShareLink(false);
-        return;
-      }
-    } catch (e) {
-      console.warn("Cloud save failed, falling back to LZ-String encoding:", e);
-    }
-
-    // 2. Guaranteed fallback: Encode directly into LZ-String URL if cloud endpoint is blocked/unreachable
-    const compressedStr = encodeCardPayload(flowConfig, currentTheme);
-    const fallbackUrl = `${window.location.origin}${window.location.pathname}?card=${compressedStr}`;
-    setShareUrl(fallbackUrl);
-    window.history.replaceState(null, "", `?card=${compressedStr}`);
-    setIsGeneratingShareLink(false);
   };
 
   const handleNextStep = () => {

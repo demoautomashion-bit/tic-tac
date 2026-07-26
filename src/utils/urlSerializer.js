@@ -44,13 +44,31 @@ export function compressImageDataUrl(dataUrl, maxDim = 400, quality = 0.65) {
 }
 
 /**
- * Compresses flow config & theme into a high-ratio URL-safe string
+ * High-compression Delta Encoder:
+ * Compresses only customized fields (stripping default unchanged text & structure)
+ * using short-key maps before LZ-String compression.
  */
-export function encodeCardPayload(flow, theme) {
+export function encodeCardPayload(flow, theme, defaultFlow = []) {
   try {
-    const payload = { flow, theme };
+    if (!flow || !Array.isArray(flow)) return "";
+
+    // Minify flow by keeping only properties that differ from defaults
+    const minifiedFlow = flow.map((step, idx) => {
+      const defaultStep = defaultFlow[idx] || {};
+      const minStep = { i: step.id, t: step.type };
+
+      for (const [key, val] of Object.entries(step)) {
+        if (key === "id" || key === "type") continue;
+        // Skip null, undefined, or empty values matching defaults
+        if (JSON.stringify(val) !== JSON.stringify(defaultStep[key])) {
+          minStep[key] = val;
+        }
+      }
+      return minStep;
+    });
+
+    const payload = { f: minifiedFlow, th: theme };
     const jsonStr = JSON.stringify(payload);
-    // Use LZ-String encoded URI component for maximum compression ratio
     return LZString.compressToEncodedURIComponent(jsonStr);
   } catch (e) {
     console.error("Encoding error:", e);
@@ -59,24 +77,39 @@ export function encodeCardPayload(flow, theme) {
 }
 
 /**
- * Decodes card payload string from URL param (supports LZ-String and legacy Base64)
+ * Decodes card payload string from URL param (supports Delta format, legacy LZ-String and Base64)
  */
-export function decodeCardPayload(str) {
+export function decodeCardPayload(str, defaultFlow = []) {
   if (!str) return null;
 
-  // 1. Try LZ-String decompression first
   try {
     const decompressed = LZString.decompressFromEncodedURIComponent(str);
     if (decompressed) {
       const parsed = JSON.parse(decompressed);
+
+      // Handle Delta Minified Format ({ f, th })
+      if (parsed && parsed.f && Array.isArray(parsed.f)) {
+        const restoredFlow = parsed.f.map((minStep, idx) => {
+          const defaultStep = defaultFlow[idx] || {};
+          const fullStep = { ...defaultStep, id: minStep.i || defaultStep.id, type: minStep.t || defaultStep.type };
+
+          for (const [key, val] of Object.entries(minStep)) {
+            if (key === "i" || key === "t") continue;
+            fullStep[key] = val;
+          }
+          return fullStep;
+        });
+
+        return { flow: restoredFlow, theme: parsed.th || 'burgundy' };
+      }
+
       if (Array.isArray(parsed)) return { flow: parsed, theme: null };
       if (parsed && parsed.flow) return parsed;
     }
   } catch (e) {
-    // Continue to legacy fallback
+    // Fall back to legacy base64 decoding
   }
 
-  // 2. Legacy Base64 fallback for older generated links
   try {
     const decoded = decodeURIComponent(escape(atob(str)));
     const parsed = JSON.parse(decoded);
