@@ -1,6 +1,8 @@
 "use client";
 
 import React from "react";
+import { compressImageDataUrl } from "@/utils/urlSerializer";
+
 
 export default function CustomizerPanel({
   isCustomizerOpen,
@@ -478,8 +480,9 @@ export default function CustomizerPanel({
                             onChange={(e) => {
                               if (e.target.files && e.target.files[0]) {
                                 const reader = new FileReader();
-                                reader.onload = (ev) => {
-                                  handleUpdateStepProperty(idx, "imageUrl", ev.target.result);
+                                reader.onload = async (ev) => {
+                                  const compressed = await compressImageDataUrl(ev.target.result);
+                                  handleUpdateStepProperty(idx, "imageUrl", compressed);
                                 };
                                 reader.readAsDataURL(e.target.files[0]);
                               }
@@ -554,9 +557,10 @@ export default function CustomizerPanel({
                                 onChange={(e) => {
                                   if (e.target.files && e.target.files[0]) {
                                     const reader = new FileReader();
-                                    reader.onload = (ev) => {
+                                    reader.onload = async (ev) => {
+                                      const compressed = await compressImageDataUrl(ev.target.result);
                                       const nextPols = [...step.polaroids];
-                                      nextPols[pIdx] = { ...nextPols[pIdx], url: ev.target.result };
+                                      nextPols[pIdx] = { ...nextPols[pIdx], url: compressed };
                                       handleUpdateStepProperty(idx, "polaroids", nextPols);
                                     };
                                     reader.readAsDataURL(e.target.files[0]);

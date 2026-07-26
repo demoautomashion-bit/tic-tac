@@ -156,32 +156,8 @@ const DEFAULT_FLOW = [
 ];
 
 import ShareModal from "@/components/ShareModal";
+import { encodeCardPayload, decodeCardPayload } from "@/utils/urlSerializer";
 
-const encodeConfig = (config, theme) => {
-  try {
-    const payload = { flow: config, theme };
-    const str = JSON.stringify(payload);
-    return btoa(unescape(encodeURIComponent(str)));
-  } catch (e) {
-    console.error(e);
-    return "";
-  }
-};
-
-const decodeConfig = (base64Str) => {
-  try {
-    const decoded = decodeURIComponent(escape(atob(base64Str)));
-    const parsed = JSON.parse(decoded);
-    // Backward compatibility if parsed is array instead of payload object
-    if (Array.isArray(parsed)) {
-      return { flow: parsed, theme: null };
-    }
-    return parsed;
-  } catch (e) {
-    console.error(e);
-    return null;
-  }
-};
 
 export default function Home() {
   const [flowConfig, setFlowConfig] = useState([]);
@@ -199,7 +175,7 @@ export default function Home() {
     const cardParam = params.get("card");
     
     if (cardParam) {
-      const decoded = decodeConfig(cardParam);
+      const decoded = decodeCardPayload(cardParam);
       if (decoded && decoded.flow && Array.isArray(decoded.flow)) {
         setFlowConfig(decoded.flow);
         if (decoded.theme) {
@@ -237,8 +213,8 @@ export default function Home() {
   // Update browser URL in real time whenever configuration or theme changes
   useEffect(() => {
     if (flowConfig.length === 0) return;
-    const hash = encodeConfig(flowConfig, currentTheme);
-    const newUrl = `${window.location.pathname}?card=${hash}`;
+    const compressedStr = encodeCardPayload(flowConfig, currentTheme);
+    const newUrl = `${window.location.pathname}?card=${compressedStr}`;
     window.history.replaceState(null, "", newUrl);
     setShareUrl(window.location.origin + newUrl);
   }, [flowConfig, currentTheme]);

@@ -53,9 +53,14 @@ export default function ShareModal({ isOpen, onClose, shareUrl, copiedLink, onCo
         </p>
 
         <div style={{ marginBottom: "1.25rem" }}>
-          <label style={{ display: "block", fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "1px", opacity: "0.7", marginBottom: "0.35rem" }}>
-            Shareable Web Link
-          </label>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.35rem" }}>
+            <label style={{ fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "1px", opacity: "0.7" }}>
+              Shareable Web Link
+            </label>
+            <span style={{ fontSize: "0.7rem", color: shareUrl.length > 2000 ? "#F87171" : "#34D399", opacity: 0.9 }}>
+              {shareUrl.length > 2000 ? "⚠️ Link is long (many photos)" : "✓ Compact & ready to share"}
+            </span>
+          </div>
           <div style={{ display: "flex", gap: "8px" }}>
             <input 
               type="text" 
