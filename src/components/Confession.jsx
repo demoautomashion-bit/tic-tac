@@ -60,7 +60,7 @@ export default function Confession({ step }) {
   };
 
   return (
-    <div className="stage-panel">
+    <div className="stage-panel confession-stage">
       {/* Reasons Grid */}
       <section style={{ marginBottom: "4rem" }}>
         <div className="section-inner">

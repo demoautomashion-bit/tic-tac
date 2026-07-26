@@ -1366,6 +1366,64 @@ footer{ text-align:center; padding: 3rem 1.5rem 4rem; opacity: 0.5; font-size: 0
     width: min(300px, 86vw);
     height: min(210px, 60vw);
   }
+
+  /* Confession finale: stack sections vertically; polaroids/reasons fit viewport */
+  .stage-panel.confession-stage {
+    flex-direction: column;
+    align-items: center;
+    box-sizing: border-box;
+    overflow-x: clip;
+  }
+
+  .stage-panel.confession-stage > section,
+  .stage-panel.confession-stage > .closing-card {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  .stage-panel.confession-stage .section-inner {
+    padding-left: 0.25rem;
+    padding-right: 0.25rem;
+    box-sizing: border-box;
+  }
+
+  .stage-panel.confession-stage .reasons-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .stage-panel.confession-stage .flip-card {
+    height: auto;
+    min-height: 180px;
+  }
+
+  .stage-panel.confession-stage .gallery {
+    gap: 1.25rem;
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+    width: 100%;
+    box-sizing: border-box;
+    justify-content: center;
+  }
+
+  .stage-panel.confession-stage .polaroid {
+    width: min(190px, calc(100vw - 2.5rem));
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  .stage-panel.confession-stage .polaroid-img {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 1;
+    max-height: min(190px, calc(100vw - 2.5rem));
+  }
+
+  .stage-panel.confession-stage .closing-card .sig {
+    font-size: clamp(1.75rem, 8vw, 2.8rem);
+    word-break: break-word;
+  }
 }
 
 @media (max-width: 480px) {
