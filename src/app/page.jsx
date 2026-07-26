@@ -157,6 +157,7 @@ const DEFAULT_FLOW = [
 
 import ShareModal from "@/components/ShareModal";
 import { encodeCardPayload, decodeCardPayload } from "@/utils/urlSerializer";
+import { saveCardPayloadToCloud, fetchCardPayloadFromCloud } from "@/utils/cardStorage";
 
 
 export default function Home() {
@@ -168,56 +169,90 @@ export default function Home() {
   const [currentTheme, setCurrentTheme] = useState('burgundy');
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [shareUrl, setShareUrl] = useState("");
+  const [isGeneratingShareLink, setIsGeneratingShareLink] = useState(false);
   const canvasRef = useRef(null);
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const cardParam = params.get("card");
-    
-    if (cardParam) {
-      const decoded = decodeCardPayload(cardParam);
-      if (decoded && decoded.flow && Array.isArray(decoded.flow)) {
-        setFlowConfig(decoded.flow);
-        if (decoded.theme) {
-          setCurrentTheme(decoded.theme);
-          document.documentElement.setAttribute('data-theme', decoded.theme);
-        }
-        return;
-      }
-    }
-
-    const savedTheme = localStorage.getItem('app_color_theme');
-    if (savedTheme) {
-      setCurrentTheme(savedTheme);
-      document.documentElement.setAttribute('data-theme', savedTheme);
-    } else {
-      document.documentElement.setAttribute('data-theme', 'burgundy');
-    }
-
-    const saved = localStorage.getItem("custom_flow_config");
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) {
-          setFlowConfig(parsed);
+    async function loadCardData() {
+      const params = new URLSearchParams(window.location.search);
+      const cloudId = params.get("c");
+      const cardParam = params.get("card");
+      
+      // 1. Try short cloud ID parameter first (e.g. ?c=binId)
+      if (cloudId) {
+        const cloudData = await fetchCardPayloadFromCloud(cloudId);
+        if (cloudData && cloudData.flow && Array.isArray(cloudData.flow)) {
+          setFlowConfig(cloudData.flow);
+          if (cloudData.theme) {
+            setCurrentTheme(cloudData.theme);
+            document.documentElement.setAttribute('data-theme', cloudData.theme);
+          }
           return;
         }
-      } catch (e) {
-        console.error(e);
       }
+
+      // 2. Legacy encoded parameter fallback (?card=...)
+      if (cardParam) {
+        const decoded = decodeCardPayload(cardParam);
+        if (decoded && decoded.flow && Array.isArray(decoded.flow)) {
+          setFlowConfig(decoded.flow);
+          if (decoded.theme) {
+            setCurrentTheme(decoded.theme);
+            document.documentElement.setAttribute('data-theme', decoded.theme);
+          }
+          return;
+        }
+      }
+
+      const savedTheme = localStorage.getItem('app_color_theme');
+      if (savedTheme) {
+        setCurrentTheme(savedTheme);
+        document.documentElement.setAttribute('data-theme', savedTheme);
+      } else {
+        document.documentElement.setAttribute('data-theme', 'burgundy');
+      }
+
+      const saved = localStorage.getItem("custom_flow_config");
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed)) {
+            setFlowConfig(parsed);
+            return;
+          }
+        } catch (e) {
+          console.error(e);
+        }
+      }
+
+      setFlowConfig(DEFAULT_FLOW);
     }
 
-    setFlowConfig(DEFAULT_FLOW);
+    loadCardData();
   }, []);
 
-  // Update browser URL in real time whenever configuration or theme changes
+  // Update share link state when configuration or theme changes
   useEffect(() => {
     if (flowConfig.length === 0) return;
+    // Fallback inline encoded string for immediate preview
     const compressedStr = encodeCardPayload(flowConfig, currentTheme);
-    const newUrl = `${window.location.pathname}?card=${compressedStr}`;
-    window.history.replaceState(null, "", newUrl);
-    setShareUrl(window.location.origin + newUrl);
+    const fallbackUrl = `${window.location.origin}${window.location.pathname}?card=${compressedStr}`;
+    setShareUrl(fallbackUrl);
   }, [flowConfig, currentTheme]);
+
+  const generateSharingLink = async () => {
+    setIsGeneratingShareLink(true);
+    setIsShareModalOpen(true);
+
+    // Save payload to cloud to get permanent short ID
+    const binId = await saveCardPayloadToCloud(flowConfig, currentTheme);
+    if (binId) {
+      const shortUrl = `${window.location.origin}${window.location.pathname}?c=${binId}`;
+      setShareUrl(shortUrl);
+      window.history.replaceState(null, "", `?c=${binId}`);
+    }
+    setIsGeneratingShareLink(false);
+  };
 
   const handleNextStep = () => {
     if (currentStepIndex < flowConfig.length - 1) {
@@ -491,11 +526,6 @@ export default function Home() {
     setTimeout(() => setCopiedLink(false), 2000);
   };
 
-  const generateSharingLink = () => {
-    handleCopyShareUrl();
-    setIsShareModalOpen(true);
-  };
-
   const currentStep = flowConfig[currentStepIndex] || {};
 
   return (
@@ -518,7 +548,7 @@ export default function Home() {
         setEditingStepIndex={setEditingStepIndex}
         copiedLink={copiedLink}
         generateSharingLink={generateSharingLink}
-        onOpenShareModal={() => setIsShareModalOpen(true)}
+        onOpenShareModal={generateSharingLink}
         handleResetToDefault={handleResetToDefault}
         handleMoveUp={handleMoveUp}
         handleMoveDown={handleMoveDown}
@@ -536,6 +566,7 @@ export default function Home() {
         shareUrl={shareUrl}
         copiedLink={copiedLink}
         onCopy={handleCopyShareUrl}
+        isGenerating={isGeneratingShareLink}
       />
 
       <div className="stage-container">

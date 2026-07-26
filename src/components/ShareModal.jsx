@@ -2,8 +2,10 @@
 
 import React from "react";
 
-export default function ShareModal({ isOpen, onClose, shareUrl, copiedLink, onCopy }) {
+export default function ShareModal({ isOpen, onClose, shareUrl, copiedLink, onCopy, isGenerating }) {
   if (!isOpen) return null;
+
+  const isShortLink = shareUrl.includes("?c=");
 
   return (
     <div style={{
@@ -49,7 +51,7 @@ export default function ShareModal({ isOpen, onClose, shareUrl, copiedLink, onCo
           💌 Share Your Customized Card
         </h3>
         <p style={{ fontSize: "0.85rem", opacity: 0.8, lineHeight: 1.5, marginBottom: "1.25rem" }}>
-          Anyone opening this link will see your custom slides, questions, and visual theme.
+          Anyone opening this link will see your custom slides, questions, photos, and visual theme.
         </p>
 
         <div style={{ marginBottom: "1.25rem" }}>
@@ -57,15 +59,15 @@ export default function ShareModal({ isOpen, onClose, shareUrl, copiedLink, onCo
             <label style={{ fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "1px", opacity: "0.7" }}>
               Shareable Web Link
             </label>
-            <span style={{ fontSize: "0.7rem", color: shareUrl.length > 2000 ? "#F87171" : "#34D399", opacity: 0.9 }}>
-              {shareUrl.length > 2000 ? "⚠️ Link is long (many photos)" : "✓ Compact & ready to share"}
+            <span style={{ fontSize: "0.7rem", color: isGenerating ? "#FBBF24" : isShortLink ? "#34D399" : "#6EE7B7", opacity: 0.9 }}>
+              {isGenerating ? "⏳ Generating short link..." : isShortLink ? "⚡ Ultra-Short Cloud Link" : "✓ Ready to share"}
             </span>
           </div>
           <div style={{ display: "flex", gap: "8px" }}>
             <input 
               type="text" 
               readOnly 
-              value={shareUrl}
+              value={isGenerating ? "Creating permanent cloud short link..." : shareUrl}
               style={{
                 flex: 1,
                 padding: "10px 12px",
@@ -79,6 +81,7 @@ export default function ShareModal({ isOpen, onClose, shareUrl, copiedLink, onCo
             />
             <button 
               onClick={onCopy}
+              disabled={isGenerating}
               className="editor-btn-primary"
               style={{ padding: "0 1rem", fontSize: "0.85rem", whiteSpace: "nowrap", width: "auto" }}
             >
