@@ -16,8 +16,19 @@ export default function CustomizerPanel({
   handleDeleteStep,
   handleAddStep,
   handleUpdateStepProperty,
-  handleSaveToLocalStorage
+  handleSaveToLocalStorage,
+  currentTheme = 'burgundy',
+  onSelectTheme = () => {}
 }) {
+  const THEME_OPTIONS = [
+    { id: 'burgundy', name: 'Velvet Burgundy', icon: '🍷', accent: '#E68FA3', bg: '#150005' },
+    { id: 'amethyst', name: 'Midnight Amethyst', icon: '🔮', accent: '#B57EDC', bg: '#0F081D' },
+    { id: 'emerald', name: 'Emerald Enchantment', icon: '🌿', accent: '#D4AF37', bg: '#051C14' },
+    { id: 'sapphire', name: 'Sapphire Ocean', icon: '💎', accent: '#38BDF8', bg: '#040D1A' },
+    { id: 'luxury-gold', name: 'Slate & Honey Gold', icon: '✨', accent: '#F59E0B', bg: '#121316' },
+    { id: 'blossom-light', name: 'Pastel Blossom', icon: '🌸', accent: '#E11D48', bg: '#FAF4F5' },
+  ];
+
   return (
     <div className={`customizer-panel ${isCustomizerOpen ? "open" : ""}`}>
       <div className="customizer-header">
@@ -26,6 +37,55 @@ export default function CustomizerPanel({
       </div>
 
       <div className="customizer-content">
+        {/* Theme & Atmosphere Customizer Section */}
+        <div className="customizer-section" style={{ borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '1.25rem', marginBottom: '1.25rem' }}>
+          <h3 style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>🎨 Theme & Visual Atmosphere</h3>
+          <p style={{ fontSize: "0.78rem", opacity: 0.7, marginBottom: "0.85rem" }}>
+            Choose a visual theme for the card and games:
+          </p>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+            {THEME_OPTIONS.map((t) => {
+              const active = currentTheme === t.id;
+              return (
+                <button
+                  key={t.id}
+                  onClick={() => onSelectTheme(t.id)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justify: 'space-between',
+                    padding: '8px 10px',
+                    borderRadius: '10px',
+                    fontSize: '0.75rem',
+                    cursor: 'pointer',
+                    background: active ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.04)',
+                    border: active ? `1.5px solid ${t.accent}` : '1px solid rgba(255,255,255,0.1)',
+                    color: '#fff',
+                    textAlign: 'left',
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span>{t.icon}</span>
+                    <span style={{ fontWeight: active ? '600' : 'normal' }}>{t.name}</span>
+                  </span>
+                  <span
+                    style={{
+                      width: '10px',
+                      height: '10px',
+                      borderRadius: '50%',
+                      background: t.accent,
+                      border: '1px solid rgba(0,0,0,0.3)',
+                      flexShrink: 0
+                    }}
+                  />
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
         <div className="customizer-section">
           <h3>Manage Flow & Steps</h3>
           <p style={{ fontSize: "0.8rem", opacity: 0.7, marginBottom: "1rem" }}>

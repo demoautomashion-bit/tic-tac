@@ -525,6 +525,8 @@ export default function Home() {
         handleAddStep={handleAddStep}
         handleUpdateStepProperty={handleUpdateStepProperty}
         handleSaveToLocalStorage={handleSaveToLocalStorage}
+        currentTheme={currentTheme}
+        onSelectTheme={handleSelectTheme}
       />
 
       <div className="stage-container">
@@ -539,7 +541,12 @@ export default function Home() {
         )}
 
         {currentStep.type === "quiz" && (
-          <Quiz step={currentStep} onComplete={handleNextStep} />
+          <Quiz 
+            step={currentStep} 
+            onComplete={handleNextStep} 
+            currentTheme={currentTheme}
+            onSelectTheme={handleSelectTheme}
+          />
         )}
 
         {currentStep.type === "timeline" && (
@@ -616,9 +623,6 @@ export default function Home() {
       {currentStep.type === "confession" && (
         <footer>made with more care than code, for {currentStep.recipientName} · {currentStep.footerYear}</footer>
       )}
-
-      {/* Floating Theme Selector */}
-      <ThemeSelector currentTheme={currentTheme} onSelectTheme={handleSelectTheme} />
 
       {/* Dynamic Background FX Matching Current Theme */}
       <DynamicBackground theme={currentTheme} />

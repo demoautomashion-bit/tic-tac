@@ -17,7 +17,7 @@
   --script: 'Alex Brush', cursive;
 }
 
-/* 1. Velvet Burgundy (Default / Romantic) */
+/* 1. Velvet Burgundy (Default / Romantic Wine) */
 [data-theme="burgundy"] {
   --bg-dark-1: #150005;
   --bg-dark-2: #2B020B;
@@ -32,79 +32,79 @@
   --parchment-dash: rgba(139, 90, 43, 0.25);
 }
 
-/* 2. Midnight Amethyst (Deep Violet & Rose Gold) */
+/* 2. Midnight Amethyst (Deep Violet & Electric Lavender) */
 [data-theme="amethyst"] {
   --bg-dark-1: #0F081D;
   --bg-dark-2: #1D1035;
-  --bg-blob-1: #3B1566;
+  --bg-blob-1: #51228A;
   --text-light: #F5EFFF;
-  --rose-pink: #EAA5AD;
-  --champagne: #CBB2FE;
+  --rose-pink: #B57EDC;
+  --champagne: #E2E8F0;
   --ink: #231638;
-  --parchment: #F2EAFA;
+  --parchment: #F4EEFB;
   --parchment-stain: #D9C8EB;
-  --parchment-border: rgba(100, 60, 150, 0.25);
-  --parchment-dash: rgba(100, 60, 150, 0.28);
+  --parchment-border: rgba(120, 70, 180, 0.25);
+  --parchment-dash: rgba(120, 70, 180, 0.28);
 }
 
-/* 3. Emerald Enchantment (Deep Forest & Warm Gold) */
+/* 3. Emerald Enchantment (Royal Forest & Antique Gold) */
 [data-theme="emerald"] {
-  --bg-dark-1: #071610;
-  --bg-dark-2: #0E281E;
-  --bg-blob-1: #164232;
+  --bg-dark-1: #051C14;
+  --bg-dark-2: #0C3325;
+  --bg-blob-1: #18523C;
   --text-light: #F0F9F4;
   --rose-pink: #A8C5B5;
-  --champagne: #E5C07B;
+  --champagne: #D4AF37;
   --ink: #13241C;
   --parchment: #EBF4EE;
   --parchment-stain: #CEE0D4;
-  --parchment-border: rgba(30, 90, 60, 0.25);
-  --parchment-dash: rgba(30, 90, 60, 0.28);
+  --parchment-border: rgba(30, 110, 70, 0.25);
+  --parchment-dash: rgba(30, 110, 70, 0.28);
 }
 
-/* 4. Sapphire Stars (Deep Oceanic Blue & Celestial Silver/Gold) */
+/* 4. Sapphire Ocean (Deep Oceanic Navy & Ice Blue) */
 [data-theme="sapphire"] {
-  --bg-dark-1: #060F1E;
-  --bg-dark-2: #0B1B36;
-  --bg-blob-1: #133363;
-  --text-light: #F0F4FA;
-  --rose-pink: #92C5F9;
-  --champagne: #EAD5B2;
-  --ink: #132238;
-  --parchment: #EAF0F8;
-  --parchment-stain: #CAD8EC;
-  --parchment-border: rgba(35, 80, 140, 0.25);
-  --parchment-dash: rgba(35, 80, 140, 0.28);
+  --bg-dark-1: #040D1A;
+  --bg-dark-2: #0A1E38;
+  --bg-blob-1: #103B70;
+  --text-light: #F0F6FF;
+  --rose-pink: #38BDF8;
+  --champagne: #F1F5F9;
+  --ink: #0E1D33;
+  --parchment: #EAF2FB;
+  --parchment-stain: #CADCF2;
+  --parchment-border: rgba(40, 110, 200, 0.25);
+  --parchment-dash: rgba(40, 110, 200, 0.28);
 }
 
-/* 5. Midnight Obsidian (Sleek Dark & Neon Crimson) */
-[data-theme="obsidian"] {
-  --bg-dark-1: #0C0C0E;
-  --bg-dark-2: #191920;
-  --bg-blob-1: #381018;
-  --text-light: #F9F9FB;
-  --rose-pink: #F04464;
-  --champagne: #F7B731;
-  --ink: #21212B;
-  --parchment: #F3F3F7;
-  --parchment-stain: #DBDBE5;
-  --parchment-border: rgba(80, 80, 100, 0.25);
-  --parchment-dash: rgba(80, 80, 100, 0.28);
+/* 5. Luxury Slate & Honey Gold (Dark Charcoal & Honey Gold) */
+[data-theme="luxury-gold"] {
+  --bg-dark-1: #121316;
+  --bg-dark-2: #212328;
+  --bg-blob-1: #42361A;
+  --text-light: #FEF8EC;
+  --rose-pink: #F59E0B;
+  --champagne: #FEF3C7;
+  --ink: #26241E;
+  --parchment: #FAF5EA;
+  --parchment-stain: #EADCBF;
+  --parchment-border: rgba(180, 130, 40, 0.25);
+  --parchment-dash: rgba(180, 130, 40, 0.28);
 }
 
-/* 6. Sunset Dusk (Warm Terracotta & Soft Peach) */
-[data-theme="sunset"] {
-  --bg-dark-1: #1A0C13;
-  --bg-dark-2: #2E151F;
-  --bg-blob-1: #5E202F;
-  --text-light: #FFF6F3;
-  --rose-pink: #F7A8B8;
-  --champagne: #F4B982;
-  --ink: #331B24;
-  --parchment: #FAF0E6;
-  --parchment-stain: #ECCDB8;
-  --parchment-border: rgba(140, 70, 50, 0.25);
-  --parchment-dash: rgba(140, 70, 50, 0.28);
+/* 6. Pastel Blossom (Light Mode Option / Soft Rose Quartz) */
+[data-theme="blossom-light"] {
+  --bg-dark-1: #FAF4F5;
+  --bg-dark-2: #F3E5E8;
+  --bg-blob-1: #FCE7F0;
+  --text-light: #3D0C1A;
+  --rose-pink: #E11D48;
+  --champagne: #BE123C;
+  --ink: #28050F;
+  --parchment: #FFFFFF;
+  --parchment-stain: #F9E4E8;
+  --parchment-border: rgba(225, 29, 72, 0.25);
+  --parchment-dash: rgba(225, 29, 72, 0.3);
 }
 
 *{ margin:0; padding:0; box-sizing:border-box; }

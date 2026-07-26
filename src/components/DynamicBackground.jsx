@@ -21,7 +21,6 @@ export default function DynamicBackground({ theme }) {
 
     window.addEventListener('resize', handleResize);
 
-    // Dynamic particle configurations per theme
     let particles = [];
     const count = 45;
 
@@ -43,19 +42,18 @@ export default function DynamicBackground({ theme }) {
 
     createParticles();
 
-    // Theme color mappings for canvas elements
     const getColors = () => {
       switch (theme) {
         case 'amethyst':
-          return { primary: 'rgba(234, 165, 173, ', secondary: 'rgba(203, 178, 254, ' };
+          return { primary: 'rgba(181, 126, 220, ', secondary: 'rgba(226, 232, 240, ' };
         case 'emerald':
-          return { primary: 'rgba(229, 192, 123, ', secondary: 'rgba(168, 197, 181, ' };
+          return { primary: 'rgba(212, 175, 55, ', secondary: 'rgba(168, 197, 181, ' };
         case 'sapphire':
-          return { primary: 'rgba(146, 197, 249, ', secondary: 'rgba(234, 213, 178, ' };
-        case 'obsidian':
-          return { primary: 'rgba(240, 68, 100, ', secondary: 'rgba(247, 183, 49, ' };
-        case 'sunset':
-          return { primary: 'rgba(247, 168, 184, ', secondary: 'rgba(244, 185, 130, ' };
+          return { primary: 'rgba(56, 189, 248, ', secondary: 'rgba(241, 245, 249, ' };
+        case 'luxury-gold':
+          return { primary: 'rgba(245, 158, 11, ', secondary: 'rgba(254, 243, 199, ' };
+        case 'blossom-light':
+          return { primary: 'rgba(225, 29, 72, ', secondary: 'rgba(190, 18, 60, ' };
         case 'burgundy':
         default:
           return { primary: 'rgba(230, 143, 163, ', secondary: 'rgba(236, 198, 149, ' };
@@ -94,7 +92,6 @@ export default function DynamicBackground({ theme }) {
       ctx.beginPath();
       ctx.moveTo(0, -size * 1.5);
       ctx.lineTo(size, 0);
-      ctx.moveTo(size, 0);
       ctx.lineTo(0, size * 1.5);
       ctx.lineTo(-size, 0);
       ctx.closePath();
@@ -126,7 +123,7 @@ export default function DynamicBackground({ theme }) {
           drawHeart(ctx, p.x, p.y, p.size * 2.2, colorStr);
         } else if (theme === 'amethyst' || theme === 'sapphire') {
           drawStar(ctx, p.x, p.y, p.size * 1.4, colorStr);
-        } else if (theme === 'obsidian') {
+        } else if (theme === 'luxury-gold') {
           drawDiamond(ctx, p.x, p.y, p.size * 1.5, colorStr);
         } else if (theme === 'emerald') {
           ctx.save();
@@ -138,6 +135,7 @@ export default function DynamicBackground({ theme }) {
           ctx.fill();
           ctx.restore();
         } else {
+          // Blossom light
           ctx.save();
           ctx.beginPath();
           ctx.arc(p.x, p.y, p.size * 3.5, 0, Math.PI * 2);
