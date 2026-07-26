@@ -10,6 +10,9 @@ import MemoryGame from "@/components/MemoryGame";
 import Confession from "@/components/Confession";
 import CustomizerPanel from "@/components/CustomizerPanel";
 
+import ThemeSelector from "@/components/ThemeSelector";
+import DynamicBackground from "@/components/DynamicBackground";
+
 import TicTacToeGame from "@/components/games/TicTacToe";
 import CupidCatchGame from "@/components/games/CupidCatch";
 import ConnectLoveGame from "@/components/games/ConnectLove";
@@ -178,7 +181,24 @@ export default function Home() {
   const [isCustomizerOpen, setIsCustomizerOpen] = useState(false);
   const [editingStepIndex, setEditingStepIndex] = useState(null);
   const [copiedLink, setCopiedLink] = useState(false);
+  const [currentTheme, setCurrentTheme] = useState('burgundy');
   const canvasRef = useRef(null);
+
+  useEffect(() => {
+    const savedTheme = localStorage.getItem('app_color_theme');
+    if (savedTheme) {
+      setCurrentTheme(savedTheme);
+      document.documentElement.setAttribute('data-theme', savedTheme);
+    } else {
+      document.documentElement.setAttribute('data-theme', 'burgundy');
+    }
+  }, []);
+
+  const handleSelectTheme = (themeId) => {
+    setCurrentTheme(themeId);
+    localStorage.setItem('app_color_theme', themeId);
+    document.documentElement.setAttribute('data-theme', themeId);
+  };
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -596,6 +616,12 @@ export default function Home() {
       {currentStep.type === "confession" && (
         <footer>made with more care than code, for {currentStep.recipientName} · {currentStep.footerYear}</footer>
       )}
+
+      {/* Floating Theme Selector */}
+      <ThemeSelector currentTheme={currentTheme} onSelectTheme={handleSelectTheme} />
+
+      {/* Dynamic Background FX Matching Current Theme */}
+      <DynamicBackground theme={currentTheme} />
     </>
   );
 }

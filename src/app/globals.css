@@ -1,19 +1,110 @@
-:root{
+:root {
   --bg-dark-1: #150005;
   --bg-dark-2: #2B020B;
+  --bg-blob-1: #7A0923;
   --text-light: #FBF8F3;
   --rose-pink: #E68FA3;
   --champagne: #ECC695;
   --ink: #321A1E;
-  
-  /* Parchment Paper Colors */
   --parchment: #F2EBD9;
   --parchment-stain: #DFD3B6;
+  --parchment-border: rgba(139, 90, 43, 0.22);
+  --parchment-dash: rgba(139, 90, 43, 0.25);
   
   --serif: 'Cormorant Garamond', serif;
   --sans: 'Plus Jakarta Sans', sans-serif;
   --hand: 'Caveat', cursive;
   --script: 'Alex Brush', cursive;
+}
+
+/* 1. Velvet Burgundy (Default / Romantic) */
+[data-theme="burgundy"] {
+  --bg-dark-1: #150005;
+  --bg-dark-2: #2B020B;
+  --bg-blob-1: #7A0923;
+  --text-light: #FBF8F3;
+  --rose-pink: #E68FA3;
+  --champagne: #ECC695;
+  --ink: #321A1E;
+  --parchment: #F2EBD9;
+  --parchment-stain: #DFD3B6;
+  --parchment-border: rgba(139, 90, 43, 0.22);
+  --parchment-dash: rgba(139, 90, 43, 0.25);
+}
+
+/* 2. Midnight Amethyst (Deep Violet & Rose Gold) */
+[data-theme="amethyst"] {
+  --bg-dark-1: #0F081D;
+  --bg-dark-2: #1D1035;
+  --bg-blob-1: #3B1566;
+  --text-light: #F5EFFF;
+  --rose-pink: #EAA5AD;
+  --champagne: #CBB2FE;
+  --ink: #231638;
+  --parchment: #F2EAFA;
+  --parchment-stain: #D9C8EB;
+  --parchment-border: rgba(100, 60, 150, 0.25);
+  --parchment-dash: rgba(100, 60, 150, 0.28);
+}
+
+/* 3. Emerald Enchantment (Deep Forest & Warm Gold) */
+[data-theme="emerald"] {
+  --bg-dark-1: #071610;
+  --bg-dark-2: #0E281E;
+  --bg-blob-1: #164232;
+  --text-light: #F0F9F4;
+  --rose-pink: #A8C5B5;
+  --champagne: #E5C07B;
+  --ink: #13241C;
+  --parchment: #EBF4EE;
+  --parchment-stain: #CEE0D4;
+  --parchment-border: rgba(30, 90, 60, 0.25);
+  --parchment-dash: rgba(30, 90, 60, 0.28);
+}
+
+/* 4. Sapphire Stars (Deep Oceanic Blue & Celestial Silver/Gold) */
+[data-theme="sapphire"] {
+  --bg-dark-1: #060F1E;
+  --bg-dark-2: #0B1B36;
+  --bg-blob-1: #133363;
+  --text-light: #F0F4FA;
+  --rose-pink: #92C5F9;
+  --champagne: #EAD5B2;
+  --ink: #132238;
+  --parchment: #EAF0F8;
+  --parchment-stain: #CAD8EC;
+  --parchment-border: rgba(35, 80, 140, 0.25);
+  --parchment-dash: rgba(35, 80, 140, 0.28);
+}
+
+/* 5. Midnight Obsidian (Sleek Dark & Neon Crimson) */
+[data-theme="obsidian"] {
+  --bg-dark-1: #0C0C0E;
+  --bg-dark-2: #191920;
+  --bg-blob-1: #381018;
+  --text-light: #F9F9FB;
+  --rose-pink: #F04464;
+  --champagne: #F7B731;
+  --ink: #21212B;
+  --parchment: #F3F3F7;
+  --parchment-stain: #DBDBE5;
+  --parchment-border: rgba(80, 80, 100, 0.25);
+  --parchment-dash: rgba(80, 80, 100, 0.28);
+}
+
+/* 6. Sunset Dusk (Warm Terracotta & Soft Peach) */
+[data-theme="sunset"] {
+  --bg-dark-1: #1A0C13;
+  --bg-dark-2: #2E151F;
+  --bg-blob-1: #5E202F;
+  --text-light: #FFF6F3;
+  --rose-pink: #F7A8B8;
+  --champagne: #F4B982;
+  --ink: #331B24;
+  --parchment: #FAF0E6;
+  --parchment-stain: #ECCDB8;
+  --parchment-border: rgba(140, 70, 50, 0.25);
+  --parchment-dash: rgba(140, 70, 50, 0.28);
 }
 
 *{ margin:0; padding:0; box-sizing:border-box; }
@@ -44,13 +135,14 @@ h1,h2,h3{ font-family: var(--serif); font-weight: 500; line-height: 1.15; }
   background-size: cover;
   background-position: center;
   box-shadow: 
-    inset 0 0 35px rgba(139, 90, 43, 0.18), 
+    inset 0 0 35px rgba(0, 0, 0, 0.08), 
     0 15px 35px rgba(0, 0, 0, 0.55);
-  border: 1px solid rgba(139, 90, 43, 0.22);
+  border: 1px solid var(--parchment-border);
   border-radius: 12px;
   overflow: hidden;
   z-index: 1;
   isolation: isolate;
+  transition: background-color 0.4s ease, border-color 0.4s ease, color 0.4s ease;
 }
 
 .paper-vintage-bg {
@@ -66,10 +158,11 @@ h1,h2,h3{ font-family: var(--serif); font-weight: 500; line-height: 1.15; }
   content: '';
   position: absolute;
   inset: 3px;
-  border: 1px dashed rgba(139, 90, 43, 0.25);
+  border: 1px dashed var(--parchment-dash);
   pointer-events: none;
   border-radius: inherit;
   z-index: 3;
+  transition: border-color 0.4s ease;
 }
 
 /* ---------- AMBIENT ROMANCE LAYERS ---------- */
