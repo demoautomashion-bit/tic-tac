@@ -169,6 +169,7 @@ export default function Home() {
   const [currentTheme, setCurrentTheme] = useState('burgundy');
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [shareUrl, setShareUrl] = useState("");
+  const [activeCloudId, setActiveCloudId] = useState(null);
   const [isGeneratingShareLink, setIsGeneratingShareLink] = useState(false);
   const canvasRef = useRef(null);
 
@@ -183,6 +184,7 @@ export default function Home() {
         const cloudData = await fetchCardPayloadFromCloud(cloudId);
         if (cloudData && cloudData.flow && Array.isArray(cloudData.flow)) {
           setFlowConfig(cloudData.flow);
+          setActiveCloudId(cloudId);
           if (cloudData.theme) {
             setCurrentTheme(cloudData.theme);
             document.documentElement.setAttribute('data-theme', cloudData.theme);
@@ -234,11 +236,20 @@ export default function Home() {
   // Update share link state when configuration or theme changes
   useEffect(() => {
     if (flowConfig.length === 0) return;
-    // Fallback inline encoded string for immediate preview
+    
+    // If we have an active short cloud ID, keep the URL short!
+    if (activeCloudId) {
+      const shortUrl = `${window.location.origin}${window.location.pathname}?c=${activeCloudId}`;
+      setShareUrl(shortUrl);
+      window.history.replaceState(null, "", `?c=${activeCloudId}`);
+      return;
+    }
+
+    // Fallback inline encoded string only when no cloud ID is created yet
     const compressedStr = encodeCardPayload(flowConfig, currentTheme);
     const fallbackUrl = `${window.location.origin}${window.location.pathname}?card=${compressedStr}`;
     setShareUrl(fallbackUrl);
-  }, [flowConfig, currentTheme]);
+  }, [flowConfig, currentTheme, activeCloudId]);
 
   const generateSharingLink = async () => {
     setIsGeneratingShareLink(true);
@@ -247,6 +258,7 @@ export default function Home() {
     // Save payload to cloud to get permanent short ID
     const binId = await saveCardPayloadToCloud(flowConfig, currentTheme);
     if (binId) {
+      setActiveCloudId(binId);
       const shortUrl = `${window.location.origin}${window.location.pathname}?c=${binId}`;
       setShareUrl(shortUrl);
       window.history.replaceState(null, "", `?c=${binId}`);
@@ -397,6 +409,7 @@ export default function Home() {
   const handleSaveToLocalStorage = (updatedFlow) => {
     localStorage.setItem("custom_flow_config", JSON.stringify(updatedFlow));
     setFlowConfig(updatedFlow);
+    setActiveCloudId(null);
     setCurrentStepIndex(0);
   };
 
@@ -404,6 +417,7 @@ export default function Home() {
     if (window.confirm("Reset all customizations to default template?")) {
       localStorage.removeItem("custom_flow_config");
       setFlowConfig(DEFAULT_FLOW);
+      setActiveCloudId(null);
       setCurrentStepIndex(0);
       setEditingStepIndex(null);
     }
