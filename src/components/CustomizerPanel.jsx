@@ -486,13 +486,18 @@ export default function CustomizerPanel({
                                 const key = `puzzle-${idx}`;
                                 setUploadingStatus(key);
                                 const file = e.target.files[0];
-                                const cloudUrl = await uploadImageToCloud(file);
-                                if (cloudUrl) {
-                                  handleUpdateStepProperty(idx, "imageUrl", cloudUrl);
-                                } else {
-                                  alert("Photo upload failed. Please paste a direct image Web URL or try another image.");
-                                }
-                                setUploadingStatus("");
+                                const reader = new FileReader();
+                                reader.onload = async (ev) => {
+                                  const compressed = await compressImageDataUrl(ev.target.result);
+                                  const cloudUrl = await uploadImageToCloud(compressed);
+                                  if (cloudUrl) {
+                                    handleUpdateStepProperty(idx, "imageUrl", cloudUrl);
+                                  } else {
+                                    alert("Photo upload failed. Please try another image.");
+                                  }
+                                  setUploadingStatus("");
+                                };
+                                reader.readAsDataURL(file);
                               }
                             }}
                           />
@@ -567,23 +572,20 @@ export default function CustomizerPanel({
                                     const key = `pol-${idx}-${pIdx}`;
                                     setUploadingStatus(key);
                                     const file = e.target.files[0];
-                                    const cloudUrl = await uploadImageToCloud(file);
-                                    if (cloudUrl) {
-                                      const nextPols = [...step.polaroids];
-                                      nextPols[pIdx] = { ...nextPols[pIdx], url: cloudUrl };
-                                      handleUpdateStepProperty(idx, "polaroids", nextPols);
-                                    } else {
-                                      // Fallback to canvas compression if cloud upload fails
-                                      const reader = new FileReader();
-                                      reader.onload = async (ev) => {
-                                        const compressed = await compressImageDataUrl(ev.target.result);
+                                    const reader = new FileReader();
+                                    reader.onload = async (ev) => {
+                                      const compressed = await compressImageDataUrl(ev.target.result);
+                                      const cloudUrl = await uploadImageToCloud(compressed);
+                                      if (cloudUrl) {
                                         const nextPols = [...step.polaroids];
-                                        nextPols[pIdx] = { ...nextPols[pIdx], url: compressed };
+                                        nextPols[pIdx] = { ...nextPols[pIdx], url: cloudUrl };
                                         handleUpdateStepProperty(idx, "polaroids", nextPols);
-                                      };
-                                      reader.readAsDataURL(file);
-                                    }
-                                    setUploadingStatus("");
+                                      } else {
+                                        alert("Photo upload failed. Please try another image.");
+                                      }
+                                      setUploadingStatus("");
+                                    };
+                                    reader.readAsDataURL(file);
                                   }
                                 }}
                               />

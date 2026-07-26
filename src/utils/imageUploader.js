@@ -1,6 +1,6 @@
 /**
- * Uploads an image file or Data URL to free ImgBB image hosting API.
- * Returns a short, public web URL (e.g. https://i.ibb.co/... ~35 chars).
+ * Uploads an image file or Data URL to Vercel Blob via /api/upload.
+ * Returns a public web URL hosted on Vercel Blob.
  */
 export async function uploadImageToCloud(fileOrDataUrl) {
   if (!fileOrDataUrl) return "";
@@ -8,7 +8,6 @@ export async function uploadImageToCloud(fileOrDataUrl) {
   try {
     let fileToUpload = fileOrDataUrl;
 
-    // If it's a data URL, convert it to a Blob File for form upload
     if (typeof fileOrDataUrl === "string" && fileOrDataUrl.startsWith("data:")) {
       const arr = fileOrDataUrl.split(",");
       const mime = arr[0].match(/:(.*?);/)[1];
@@ -24,20 +23,23 @@ export async function uploadImageToCloud(fileOrDataUrl) {
     const formData = new FormData();
     formData.append("image", fileToUpload);
 
-    // Free ImgBB API key for client-side uploads
-    const API_KEY = "6d257f2c1d0138402b81ea117d9298c8";
-    const res = await fetch(`https://api.imgbb.com/1/upload?key=${API_KEY}`, {
+    const res = await fetch("/api/upload", {
       method: "POST",
       body: formData,
     });
 
-    const data = await res.json();
-    if (data && data.success && data.data && data.data.url) {
-      return data.data.url;
-    } else {
-      console.warn("ImgBB upload error response:", data);
+    if (!res.ok) {
+      console.warn("Image upload error response:", res.status);
       return null;
     }
+
+    const data = await res.json();
+    if (data && data.success && data.url) {
+      return data.url;
+    }
+
+    console.warn("Image upload warning:", data);
+    return null;
   } catch (err) {
     console.error("Cloud image upload failed:", err);
     return null;
