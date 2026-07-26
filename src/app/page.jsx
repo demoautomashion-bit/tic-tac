@@ -254,14 +254,26 @@ export default function Home() {
     setIsGeneratingShareLink(true);
     setIsShareModalOpen(true);
 
-    // Save payload to native same-origin endpoint to get short ID
-    const binId = await saveCardPayloadToCloud(flowConfig, currentTheme);
-    if (binId) {
-      setActiveCloudId(binId);
-      const shortUrl = `${window.location.origin}${window.location.pathname}?c=${binId}`;
-      setShareUrl(shortUrl);
-      window.history.replaceState(null, "", `?c=${binId}`);
+    try {
+      // 1. Try primary cloud storage endpoint
+      const binId = await saveCardPayloadToCloud(flowConfig, currentTheme);
+      if (binId) {
+        setActiveCloudId(binId);
+        const shortUrl = `${window.location.origin}${window.location.pathname}?c=${binId}`;
+        setShareUrl(shortUrl);
+        window.history.replaceState(null, "", `?c=${binId}`);
+        setIsGeneratingShareLink(false);
+        return;
+      }
+    } catch (e) {
+      console.warn("Cloud save failed, falling back to LZ-String encoding:", e);
     }
+
+    // 2. Guaranteed fallback: Encode directly into LZ-String URL if cloud endpoint is blocked/unreachable
+    const compressedStr = encodeCardPayload(flowConfig, currentTheme);
+    const fallbackUrl = `${window.location.origin}${window.location.pathname}?card=${compressedStr}`;
+    setShareUrl(fallbackUrl);
+    window.history.replaceState(null, "", `?card=${compressedStr}`);
     setIsGeneratingShareLink(false);
   };
 
