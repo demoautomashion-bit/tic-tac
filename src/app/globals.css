@@ -1333,22 +1333,47 @@ footer{ text-align:center; padding: 3rem 1.5rem 4rem; opacity: 0.5; font-size: 0
 }
 
 /* Mobile Responsiveness Improvements */
-@media (max-width: 480px) {
-  .envelope-scene {
-    width: min(290px, 85vw);
-    height: min(200px, 58vw);
-  }
-
-  .game-card, .quiz-card {
-    padding: clamp(1rem, 4vw, 1.8rem) !important;
-    width: 95vw;
+@media (max-width: 600px) {
+  .stage-container {
+    padding: 1.5rem 0.75rem !important;
+    width: 100% !important;
+    overflow-x: hidden;
   }
 
   .stage-panel {
-    padding: 0 0.5rem;
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 0 !important;
+    display: flex;
+    justify-content: center;
+  }
+
+  .game-card, .quiz-card {
+    padding: 1.5rem 1rem !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    margin: 0 auto !important;
+  }
+
+  .letter-card, .closing-card {
+    padding: 1.5rem 1rem !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  .envelope-scene {
+    width: min(300px, 86vw);
+    height: min(210px, 60vw);
+  }
+}
+
+@media (max-width: 480px) {
+  .game-card, .quiz-card {
+    padding: 1.25rem 0.85rem !important;
   }
 
   .closing-card {
-    padding: 1.5rem 1rem !important;
+    padding: 1.25rem 0.85rem !important;
   }
 }

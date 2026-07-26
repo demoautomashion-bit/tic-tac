@@ -6,7 +6,6 @@ import confetti from "canvas-confetti";
 export default function CupidCatchGame({ step, onComplete }) {
   const target = step.targetScore || 10;
   const [score, setScore] = useState(0);
-  const [basketX, setBasketX] = useState(50); // percentage 0-100
   const [items, setItems] = useState([]);
   const containerRef = useRef(null);
   const basketRef = useRef(null);
@@ -16,20 +15,26 @@ export default function CupidCatchGame({ step, onComplete }) {
     scoreRef.current = score;
   }, [score]);
 
-  // Track touch/mouse movement to slide the basket smoothly
-  const handleMove = (clientX) => {
-    if (!containerRef.current) return;
+  // Smooth GPU position update function
+  const updateBasketPosition = (clientX) => {
+    if (!containerRef.current || !basketRef.current) return;
     const rect = containerRef.current.getBoundingClientRect();
-    const x = ((clientX - rect.left) / rect.width) * 100;
-    setBasketX(Math.max(5, Math.min(95, x)));
+    const relativeX = clientX - rect.left;
+    const clampedX = Math.max(25, Math.min(rect.width - 25, relativeX));
+    basketRef.current.style.transform = `translate3d(${clampedX}px, 0, 0) translateX(-50%)`;
   };
 
-  const onMouseMove = (e) => handleMove(e.clientX);
-  const onTouchMove = (e) => {
-    if (e.touches && e.touches[0]) {
-      handleMove(e.touches[0].clientX);
-    }
+  const handlePointerMove = (e) => {
+    requestAnimationFrame(() => updateBasketPosition(e.clientX));
   };
+
+  // Center basket on initial render
+  useEffect(() => {
+    if (containerRef.current && basketRef.current) {
+      const rect = containerRef.current.getBoundingClientRect();
+      updateBasketPosition(rect.left + rect.width / 2);
+    }
+  }, []);
 
   // Spawn falling items
   useEffect(() => {
@@ -43,13 +48,13 @@ export default function CupidCatchGame({ step, onComplete }) {
       if (scoreRef.current >= target) return;
       const symbols = ["❤️", "🎁", "💖", "🍭", "🧸", "🌸"];
       const sym = symbols[Math.floor(Math.random() * symbols.length)];
-      const duration = Math.random() * 0.8 + 2.0; // 2.0s to 2.8s drop duration
+      const duration = Math.random() * 0.8 + 2.0;
 
       setItems(prev => [
         ...prev,
         {
           id: Math.random() + Date.now(),
-          x: Math.random() * 80 + 10, // 10% to 90%
+          x: Math.random() * 80 + 10,
           duration,
           symbol: sym
         }
@@ -59,7 +64,7 @@ export default function CupidCatchGame({ step, onComplete }) {
     return () => clearInterval(interval);
   }, [score, target, onComplete]);
 
-  // Collision detection loop running at native RAF speed
+  // Collision detection loop
   useEffect(() => {
     if (scoreRef.current >= target) return;
 
@@ -77,7 +82,6 @@ export default function CupidCatchGame({ step, onComplete }) {
         const itemRect = el.getBoundingClientRect();
         const itemId = el.getAttribute("data-id");
 
-        // Check bounding box overlap with basket
         const isOverlap = !(
           itemRect.right < basketRect.left ||
           itemRect.left > basketRect.right ||
@@ -86,7 +90,6 @@ export default function CupidCatchGame({ step, onComplete }) {
         );
 
         if (isOverlap) {
-          // Item caught!
           setScore(s => {
             const nextScore = s + 1;
             scoreRef.current = nextScore;
@@ -108,7 +111,7 @@ export default function CupidCatchGame({ step, onComplete }) {
   };
 
   return (
-    <div className="game-card paper-vintage" style={{ maxWidth: "480px" }}>
+    <div className="game-card paper-vintage" style={{ maxWidth: "480px", width: "100%" }}>
       <div className="paper-vintage-bg"></div>
       {step.eyebrow && <span className="eyebrow" style={{ color: "#7A0923" }}>{step.eyebrow}</span>}
       <h3>{step.title}</h3>
@@ -117,8 +120,8 @@ export default function CupidCatchGame({ step, onComplete }) {
       <div 
         ref={containerRef}
         className="cupid-catch-container"
-        onMouseMove={onMouseMove}
-        onTouchMove={onTouchMove}
+        onPointerMove={handlePointerMove}
+        onPointerDown={handlePointerMove}
         style={{
           position: "relative",
           height: "260px",
@@ -129,10 +132,11 @@ export default function CupidCatchGame({ step, onComplete }) {
           cursor: "none",
           userSelect: "none",
           touchAction: "none",
-          marginTop: "1.5rem"
+          marginTop: "1.5rem",
+          width: "100%"
         }}
       >
-        {/* Falling items using GPU accelerated CSS keyframe animation */}
+        {/* Falling items */}
         {items.map(item => (
           <div
             key={item.id}
@@ -153,18 +157,17 @@ export default function CupidCatchGame({ step, onComplete }) {
           </div>
         ))}
 
-        {/* Basket */}
+        {/* Basket with zero-latency GPU transform */}
         <div
           ref={basketRef}
           style={{
             position: "absolute",
-            left: `${basketX}%`,
+            left: 0,
             bottom: "8px",
-            transform: "translateX(-50%)",
             fontSize: "2.5rem",
             pointerEvents: "none",
             userSelect: "none",
-            transition: "left 0.05s linear"
+            willChange: "transform"
           }}
         >
           🧺
