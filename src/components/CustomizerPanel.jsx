@@ -1,7 +1,9 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { compressImageDataUrl } from "@/utils/urlSerializer";
+import { uploadImageToCloud } from "@/utils/imageUploader";
+
 
 
 export default function CustomizerPanel({
@@ -23,6 +25,8 @@ export default function CustomizerPanel({
   currentTheme = 'burgundy',
   onSelectTheme = () => {}
 }) {
+  const [uploadingStatus, setUploadingStatus] = useState("");
+
   const THEME_OPTIONS = [
     { id: 'burgundy', name: 'Velvet Burgundy', icon: '🍷', accent: '#E68FA3', bg: '#150005' },
     { id: 'amethyst', name: 'Midnight Amethyst', icon: '🔮', accent: '#B57EDC', bg: '#0F081D' },
@@ -477,19 +481,29 @@ export default function CustomizerPanel({
                             accept="image/*" 
                             id={`file-puzzle-${idx}`}
                             style={{ display: "none" }}
-                            onChange={(e) => {
+                            onChange={async (e) => {
                               if (e.target.files && e.target.files[0]) {
-                                const reader = new FileReader();
-                                reader.onload = async (ev) => {
-                                  const compressed = await compressImageDataUrl(ev.target.result);
-                                  handleUpdateStepProperty(idx, "imageUrl", compressed);
-                                };
-                                reader.readAsDataURL(e.target.files[0]);
+                                const key = `puzzle-${idx}`;
+                                setUploadingStatus(key);
+                                const file = e.target.files[0];
+                                const cloudUrl = await uploadImageToCloud(file);
+                                if (cloudUrl) {
+                                  handleUpdateStepProperty(idx, "imageUrl", cloudUrl);
+                                } else {
+                                  // Fallback to local canvas compression if cloud upload fails
+                                  const reader = new FileReader();
+                                  reader.onload = async (ev) => {
+                                    const compressed = await compressImageDataUrl(ev.target.result);
+                                    handleUpdateStepProperty(idx, "imageUrl", compressed);
+                                  };
+                                  reader.readAsDataURL(file);
+                                }
+                                setUploadingStatus("");
                               }
                             }}
                           />
                           <label htmlFor={`file-puzzle-${idx}`} className="editor-btn-secondary" style={{ marginTop: 0, cursor: "pointer", display: "block" }}>
-                            📷 Upload Photo from Device
+                            {uploadingStatus === `puzzle-${idx}` ? "⏳ Uploading photo to cloud..." : "📷 Upload Photo from Device"}
                           </label>
                         </div>
                       </div>
@@ -554,21 +568,33 @@ export default function CustomizerPanel({
                                 accept="image/*" 
                                 id={`file-pol-${idx}-${pIdx}`}
                                 style={{ display: "none" }}
-                                onChange={(e) => {
+                                onChange={async (e) => {
                                   if (e.target.files && e.target.files[0]) {
-                                    const reader = new FileReader();
-                                    reader.onload = async (ev) => {
-                                      const compressed = await compressImageDataUrl(ev.target.result);
+                                    const key = `pol-${idx}-${pIdx}`;
+                                    setUploadingStatus(key);
+                                    const file = e.target.files[0];
+                                    const cloudUrl = await uploadImageToCloud(file);
+                                    if (cloudUrl) {
                                       const nextPols = [...step.polaroids];
-                                      nextPols[pIdx] = { ...nextPols[pIdx], url: compressed };
+                                      nextPols[pIdx] = { ...nextPols[pIdx], url: cloudUrl };
                                       handleUpdateStepProperty(idx, "polaroids", nextPols);
-                                    };
-                                    reader.readAsDataURL(e.target.files[0]);
+                                    } else {
+                                      // Fallback to canvas compression if cloud upload fails
+                                      const reader = new FileReader();
+                                      reader.onload = async (ev) => {
+                                        const compressed = await compressImageDataUrl(ev.target.result);
+                                        const nextPols = [...step.polaroids];
+                                        nextPols[pIdx] = { ...nextPols[pIdx], url: compressed };
+                                        handleUpdateStepProperty(idx, "polaroids", nextPols);
+                                      };
+                                      reader.readAsDataURL(file);
+                                    }
+                                    setUploadingStatus("");
                                   }
                                 }}
                               />
                               <label htmlFor={`file-pol-${idx}-${pIdx}`} className="editor-btn-secondary" style={{ marginTop: 0, cursor: "pointer", display: "block", fontSize: "0.75rem" }}>
-                                📷 Choose Photo from Device
+                                {uploadingStatus === `pol-${idx}-${pIdx}` ? "⏳ Uploading photo..." : "📷 Choose Photo from Device"}
                               </label>
                             </div>
                             <input 
