@@ -156,9 +156,40 @@ const DEFAULT_FLOW = [
 ];
 
 import ShareModal from "@/components/ShareModal";
-import { encodeCardPayload, decodeCardPayload } from "@/utils/urlSerializer";
+import { decodeCardPayload, isCloudShareId } from "@/utils/urlSerializer";
 import { saveCardPayloadToCloud, fetchCardPayloadFromCloud } from "@/utils/cardStorage";
+import { uploadImageToCloud } from "@/utils/imageUploader";
 
+async function prepareFlowForCloudShare(flow) {
+  const prepared = JSON.parse(JSON.stringify(flow));
+
+  for (const step of prepared) {
+    if (step.imageUrl && step.imageUrl.startsWith("data:")) {
+      const url = await uploadImageToCloud(step.imageUrl);
+      if (!url) throw new Error("Failed to upload a puzzle image. Please try again.");
+      step.imageUrl = url;
+    }
+
+    if (Array.isArray(step.polaroids)) {
+      for (const polaroid of step.polaroids) {
+        if (polaroid.url && polaroid.url.startsWith("data:")) {
+          const url = await uploadImageToCloud(polaroid.url);
+          if (!url) throw new Error("Failed to upload a polaroid image. Please try again.");
+          polaroid.url = url;
+        }
+      }
+    }
+  }
+
+  return prepared;
+}
+
+function applySharedCard(record, setFlowConfig, setCurrentTheme) {
+  setFlowConfig(record.flow);
+  const theme = record.theme || "burgundy";
+  setCurrentTheme(theme);
+  document.documentElement.setAttribute("data-theme", theme);
+}
 
 export default function Home() {
   const [flowConfig, setFlowConfig] = useState([]);
@@ -171,33 +202,43 @@ export default function Home() {
   const [shareUrl, setShareUrl] = useState("");
   const [activeCloudId, setActiveCloudId] = useState(null);
   const [isGeneratingShareLink, setIsGeneratingShareLink] = useState(false);
+  const [shareLinkError, setShareLinkError] = useState(null);
+  const [shareLoadError, setShareLoadError] = useState(null);
   const canvasRef = useRef(null);
 
   useEffect(() => {
-    function loadCardData() {
+    async function loadCardData() {
       const params = new URLSearchParams(window.location.search);
       const cardParam = params.get("card") || params.get("c");
-      
-      // If a card parameter is in the URL, decode it and STRICTLY bypass localStorage!
+
       if (cardParam) {
-        const decoded = decodeCardPayload(cardParam, DEFAULT_FLOW);
-        if (decoded && decoded.flow && Array.isArray(decoded.flow)) {
-          setFlowConfig(decoded.flow);
-          if (decoded.theme) {
-            setCurrentTheme(decoded.theme);
-            document.documentElement.setAttribute('data-theme', decoded.theme);
+        if (isCloudShareId(cardParam)) {
+          const record = await fetchCardPayloadFromCloud(cardParam);
+          if (record && Array.isArray(record.flow) && record.flow.length > 0) {
+            applySharedCard(record, setFlowConfig, setCurrentTheme);
+            return;
           }
-          return;
+        } else {
+          const decoded = decodeCardPayload(cardParam, DEFAULT_FLOW);
+          if (decoded && Array.isArray(decoded.flow) && decoded.flow.length > 0) {
+            applySharedCard(decoded, setFlowConfig, setCurrentTheme);
+            return;
+          }
         }
+
+        setShareLoadError("This share link is invalid or expired.");
+        setFlowConfig(DEFAULT_FLOW);
+        setCurrentTheme("burgundy");
+        document.documentElement.setAttribute("data-theme", "burgundy");
+        return;
       }
 
-      // Only read from local storage if NO share URL parameters are present
-      const savedTheme = localStorage.getItem('app_color_theme');
+      const savedTheme = localStorage.getItem("app_color_theme");
       if (savedTheme) {
         setCurrentTheme(savedTheme);
-        document.documentElement.setAttribute('data-theme', savedTheme);
+        document.documentElement.setAttribute("data-theme", savedTheme);
       } else {
-        document.documentElement.setAttribute('data-theme', 'burgundy');
+        document.documentElement.setAttribute("data-theme", "burgundy");
       }
 
       const saved = localStorage.getItem("custom_flow_config");
@@ -219,20 +260,30 @@ export default function Home() {
     loadCardData();
   }, []);
 
-  // Update share link state when configuration or theme changes
-  useEffect(() => {
-    if (flowConfig.length === 0) return;
-    const compressedStr = encodeCardPayload(flowConfig, currentTheme, DEFAULT_FLOW);
-    const shortUrl = `${window.location.origin}${window.location.pathname}?c=${compressedStr}`;
-    setShareUrl(shortUrl);
-  }, [flowConfig, currentTheme]);
-
-  const generateSharingLink = () => {
-    const compressedStr = encodeCardPayload(flowConfig, currentTheme, DEFAULT_FLOW);
-    const shortUrl = `${window.location.origin}${window.location.pathname}?c=${compressedStr}`;
-    setShareUrl(shortUrl);
-    window.history.replaceState(null, "", `?c=${compressedStr}`);
+  const generateSharingLink = async () => {
     setIsShareModalOpen(true);
+    setIsGeneratingShareLink(true);
+    setShareUrl("");
+    setShareLinkError(null);
+
+    try {
+      const preparedFlow = await prepareFlowForCloudShare(flowConfig);
+      const cloudId = await saveCardPayloadToCloud(preparedFlow, currentTheme);
+
+      if (!cloudId) {
+        setShareLinkError("Could not create share link. Please try again.");
+        return;
+      }
+
+      const shortUrl = `${window.location.origin}${window.location.pathname}?c=${cloudId}`;
+      setShareUrl(shortUrl);
+      setActiveCloudId(cloudId);
+      window.history.replaceState(null, "", `?c=${cloudId}`);
+    } catch (error) {
+      setShareLinkError(error.message || "Could not create share link. Please try again.");
+    } finally {
+      setIsGeneratingShareLink(false);
+    }
   };
 
   const handleNextStep = () => {
@@ -550,7 +601,28 @@ export default function Home() {
         copiedLink={copiedLink}
         onCopy={handleCopyShareUrl}
         isGenerating={isGeneratingShareLink}
+        shareError={shareLinkError}
       />
+
+      {shareLoadError && (
+        <div style={{
+          position: "fixed",
+          top: "1rem",
+          left: "50%",
+          transform: "translateX(-50%)",
+          zIndex: 1000,
+          background: "rgba(127, 29, 29, 0.95)",
+          border: "1px solid rgba(248, 113, 113, 0.5)",
+          borderRadius: "8px",
+          padding: "0.75rem 1.25rem",
+          color: "#FCA5A5",
+          fontSize: "0.85rem",
+          maxWidth: "90vw",
+          textAlign: "center"
+        }}>
+          {shareLoadError}
+        </div>
+      )}
 
       <div className="stage-container">
         {flowConfig.length > 1 && (

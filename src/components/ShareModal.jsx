@@ -2,10 +2,10 @@
 
 import React from "react";
 
-export default function ShareModal({ isOpen, onClose, shareUrl, copiedLink, onCopy, isGenerating }) {
+export default function ShareModal({ isOpen, onClose, shareUrl, copiedLink, onCopy, isGenerating, shareError }) {
   if (!isOpen) return null;
 
-  const isShortLink = shareUrl.includes("?c=");
+  const isReady = Boolean(shareUrl && !isGenerating && !shareError);
 
   return (
     <div style={{
@@ -59,15 +59,18 @@ export default function ShareModal({ isOpen, onClose, shareUrl, copiedLink, onCo
             <label style={{ fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "1px", opacity: "0.7" }}>
               Shareable Web Link
             </label>
-            <span style={{ fontSize: "0.7rem", color: isGenerating ? "#FBBF24" : isShortLink ? "#34D399" : "#6EE7B7", opacity: 0.9 }}>
-              {isGenerating ? "⏳ Generating short link..." : isShortLink ? "⚡ Ultra-Short Cloud Link" : "✓ Ready to share"}
+            <span style={{ fontSize: "0.7rem", color: shareError ? "#F87171" : isGenerating ? "#FBBF24" : isReady ? "#34D399" : "#9CA3AF", opacity: 0.9 }}>
+              {shareError ? "Could not create link" : isGenerating ? "Generating link..." : isReady ? "Link ready" : "Waiting..."}
             </span>
           </div>
+          {shareError && (
+            <p style={{ fontSize: "0.8rem", color: "#F87171", marginBottom: "0.5rem" }}>{shareError}</p>
+          )}
           <div style={{ display: "flex", gap: "8px" }}>
             <input 
               type="text" 
               readOnly 
-              value={isGenerating ? "Creating permanent cloud short link..." : shareUrl}
+              value={isGenerating ? "Saving your card to the cloud..." : shareError ? "Share link unavailable" : shareUrl}
               style={{
                 flex: 1,
                 padding: "10px 12px",
@@ -81,7 +84,7 @@ export default function ShareModal({ isOpen, onClose, shareUrl, copiedLink, onCo
             />
             <button 
               onClick={onCopy}
-              disabled={isGenerating}
+              disabled={isGenerating || !isReady}
               className="editor-btn-primary"
               style={{ padding: "0 1rem", fontSize: "0.85rem", whiteSpace: "nowrap", width: "auto" }}
             >
@@ -91,22 +94,24 @@ export default function ShareModal({ isOpen, onClose, shareUrl, copiedLink, onCo
         </div>
 
         <div style={{ display: "flex", gap: "10px", marginTop: "1.5rem" }}>
-          <a 
-            href={shareUrl} 
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="editor-btn-secondary"
-            style={{ 
-              textDecoration: "none", 
-              textAlign: "center", 
-              display: "block",
-              width: "100%",
-              marginTop: 0,
-              padding: "10px"
-            }}
-          >
-            👁️ Preview Recipient View
-          </a>
+          {isReady && (
+            <a 
+              href={shareUrl} 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="editor-btn-secondary"
+              style={{ 
+                textDecoration: "none", 
+                textAlign: "center", 
+                display: "block",
+                width: "100%",
+                marginTop: 0,
+                padding: "10px"
+              }}
+            >
+              👁️ Preview Recipient View
+            </a>
+          )}
         </div>
       </div>
     </div>

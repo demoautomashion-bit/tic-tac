@@ -490,13 +490,7 @@ export default function CustomizerPanel({
                                 if (cloudUrl) {
                                   handleUpdateStepProperty(idx, "imageUrl", cloudUrl);
                                 } else {
-                                  // Fallback to local canvas compression if cloud upload fails
-                                  const reader = new FileReader();
-                                  reader.onload = async (ev) => {
-                                    const compressed = await compressImageDataUrl(ev.target.result);
-                                    handleUpdateStepProperty(idx, "imageUrl", compressed);
-                                  };
-                                  reader.readAsDataURL(file);
+                                  alert("Photo upload failed. Please paste a direct image Web URL or try another image.");
                                 }
                                 setUploadingStatus("");
                               }

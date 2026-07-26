@@ -59,9 +59,25 @@ export function encodeCardPayload(flow, theme, defaultFlow = []) {
 
       for (const [key, val] of Object.entries(step)) {
         if (key === "id" || key === "type") continue;
+
+        let sanitizedVal = val;
+
+        // Sanitize polaroids array: strip base64 data URLs if cloud upload failed
+        if (key === "polaroids" && Array.isArray(val)) {
+          sanitizedVal = val.map(p => ({
+            ...p,
+            url: (p.url && p.url.startsWith("data:")) ? "" : p.url
+          }));
+        }
+
+        // Sanitize single image URL string: strip base64 data URLs
+        if (key === "imageUrl" && typeof val === "string" && val.startsWith("data:")) {
+          sanitizedVal = "";
+        }
+
         // Skip null, undefined, or empty values matching defaults
-        if (JSON.stringify(val) !== JSON.stringify(defaultStep[key])) {
-          minStep[key] = val;
+        if (JSON.stringify(sanitizedVal) !== JSON.stringify(defaultStep[key])) {
+          minStep[key] = sanitizedVal;
         }
       }
       return minStep;
@@ -74,6 +90,11 @@ export function encodeCardPayload(flow, theme, defaultFlow = []) {
     console.error("Encoding error:", e);
     return "";
   }
+}
+
+/** Returns true when a URL param looks like a short cloud ID, not a legacy encoded payload. */
+export function isCloudShareId(param) {
+  return Boolean(param && param.length <= 40 && /^[a-zA-Z0-9_-]+$/.test(param));
 }
 
 /**
