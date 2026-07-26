@@ -230,13 +230,13 @@ h1,h2,h3{ font-family: var(--serif); font-weight: 500; line-height: 1.15; }
   letter-spacing: 0.1em;
   text-transform: uppercase;
   font-size: 0.78rem;
-  color: var(--bg-dark-1);
+  color: #120813;
   background: var(--champagne);
   padding: 0.85rem 1.9rem;
   border-radius: 40px;
-  font-weight: 600;
-  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
-  box-shadow: 0 6px 15px rgba(236,198,149,0.25);
+  font-weight: 700;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease, color 0.2s ease;
+  box-shadow: 0 6px 15px rgba(0,0,0,0.25);
   display: inline-flex;
   align-items: center;
   gap: 8px;
